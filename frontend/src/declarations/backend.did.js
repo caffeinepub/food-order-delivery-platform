@@ -8,6 +8,20 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
+export const MenuItemInput = IDL.Record({
+  'name' : IDL.Text,
+  'description' : IDL.Text,
+  'category' : IDL.Text,
+  'price' : IDL.Float64,
+});
+export const MenuItem = IDL.Record({
+  'itemId' : IDL.Text,
+  'name' : IDL.Text,
+  'description' : IDL.Text,
+  'available' : IDL.Bool,
+  'category' : IDL.Text,
+  'price' : IDL.Float64,
+});
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
   'user' : IDL.Null,
@@ -38,28 +52,24 @@ export const CustomerProfile = IDL.Record({
   'name' : IDL.Text,
   'phone' : IDL.Text,
 });
-export const MenuItem = IDL.Record({
-  'itemId' : IDL.Text,
-  'name' : IDL.Text,
-  'description' : IDL.Text,
-  'available' : IDL.Bool,
-  'category' : IDL.Text,
-  'price' : IDL.Float64,
-});
 export const OrderInput = IDL.Record({
   'orderId' : IDL.Text,
   'items' : IDL.Vec(OrderItem),
 });
+export const MenuItemUpdate = IDL.Record({
+  'itemId' : IDL.Text,
+  'name' : IDL.Opt(IDL.Text),
+  'description' : IDL.Opt(IDL.Text),
+  'category' : IDL.Opt(IDL.Text),
+  'price' : IDL.Opt(IDL.Float64),
+});
 
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
-  'addMenuItem' : IDL.Func(
-      [IDL.Text, IDL.Text, IDL.Text, IDL.Float64, IDL.Text, IDL.Bool],
-      [],
-      [],
-    ),
+  'addMenuItem' : IDL.Func([MenuItemInput], [MenuItem], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'cancelOrder' : IDL.Func([IDL.Text], [], []),
+  'deleteMenuItem' : IDL.Func([IDL.Text], [], []),
   'getAllOrders' : IDL.Func([], [IDL.Vec(CustomerOrder)], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(CustomerProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
@@ -85,13 +95,28 @@ export const idlService = IDL.Service({
   'placeOrder' : IDL.Func([OrderInput], [], []),
   'saveCallerUserProfile' : IDL.Func([CustomerProfile], [], []),
   'saveProfile' : IDL.Func([IDL.Text, IDL.Text], [], []),
-  'updateMenuItemAvailability' : IDL.Func([IDL.Text, IDL.Bool], [], []),
+  'toggleMenuItemAvailability' : IDL.Func([IDL.Text], [MenuItem], []),
+  'updateMenuItem' : IDL.Func([MenuItemUpdate], [MenuItem], []),
   'updateOrderStatus' : IDL.Func([IDL.Text, OrderStatus], [], []),
 });
 
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
+  const MenuItemInput = IDL.Record({
+    'name' : IDL.Text,
+    'description' : IDL.Text,
+    'category' : IDL.Text,
+    'price' : IDL.Float64,
+  });
+  const MenuItem = IDL.Record({
+    'itemId' : IDL.Text,
+    'name' : IDL.Text,
+    'description' : IDL.Text,
+    'available' : IDL.Bool,
+    'category' : IDL.Text,
+    'price' : IDL.Float64,
+  });
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
     'user' : IDL.Null,
@@ -119,28 +144,24 @@ export const idlFactory = ({ IDL }) => {
     'totalPrice' : IDL.Float64,
   });
   const CustomerProfile = IDL.Record({ 'name' : IDL.Text, 'phone' : IDL.Text });
-  const MenuItem = IDL.Record({
-    'itemId' : IDL.Text,
-    'name' : IDL.Text,
-    'description' : IDL.Text,
-    'available' : IDL.Bool,
-    'category' : IDL.Text,
-    'price' : IDL.Float64,
-  });
   const OrderInput = IDL.Record({
     'orderId' : IDL.Text,
     'items' : IDL.Vec(OrderItem),
   });
+  const MenuItemUpdate = IDL.Record({
+    'itemId' : IDL.Text,
+    'name' : IDL.Opt(IDL.Text),
+    'description' : IDL.Opt(IDL.Text),
+    'category' : IDL.Opt(IDL.Text),
+    'price' : IDL.Opt(IDL.Float64),
+  });
   
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
-    'addMenuItem' : IDL.Func(
-        [IDL.Text, IDL.Text, IDL.Text, IDL.Float64, IDL.Text, IDL.Bool],
-        [],
-        [],
-      ),
+    'addMenuItem' : IDL.Func([MenuItemInput], [MenuItem], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'cancelOrder' : IDL.Func([IDL.Text], [], []),
+    'deleteMenuItem' : IDL.Func([IDL.Text], [], []),
     'getAllOrders' : IDL.Func([], [IDL.Vec(CustomerOrder)], ['query']),
     'getCallerUserProfile' : IDL.Func(
         [],
@@ -170,7 +191,8 @@ export const idlFactory = ({ IDL }) => {
     'placeOrder' : IDL.Func([OrderInput], [], []),
     'saveCallerUserProfile' : IDL.Func([CustomerProfile], [], []),
     'saveProfile' : IDL.Func([IDL.Text, IDL.Text], [], []),
-    'updateMenuItemAvailability' : IDL.Func([IDL.Text, IDL.Bool], [], []),
+    'toggleMenuItemAvailability' : IDL.Func([IDL.Text], [MenuItem], []),
+    'updateMenuItem' : IDL.Func([MenuItemUpdate], [MenuItem], []),
     'updateOrderStatus' : IDL.Func([IDL.Text, OrderStatus], [], []),
   });
 };

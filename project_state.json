@@ -1,14 +1,15 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 5,
-  "summary": "Two separate standalone web apps sharing a single backend: (1) a Customer Portal with Internet Identity login, nav bar (Browse Menu, My Orders, Account), menu browsing, cart, checkout pre-filled from profile, order history, and account management; and (2) a Courier App with a full order dashboard and status controls (pending → accepted → preparing → out_for_delivery → delivered). Both apps share one Motoko backend actor handling orders, menu, and customer profiles. No cross-app navigation.",
+  "projectStateVersion": 13,
+  "summary": "Two separate standalone web apps sharing a single backend: (1) a Customer Portal (The Deccan BHOJAN) with Internet Identity login, nav bar (Browse Menu, My Orders, Account), menu browsing, cart, checkout pre-filled from profile, order history, and account management; and (2) a Courier App with a PIN-based access gate (PIN: 1953), a full order dashboard, status controls (pending → accepted → preparing → out_for_delivery → delivered), and a Menu Management section (add, edit, toggle availability, delete items). Both apps share one Motoko backend actor handling orders, menu, and customer profiles. No cross-app navigation.",
   "architectural_notes": [
     "Order status flow: placed → preparing → out for delivery → delivered",
     "Two separate standalone frontend deployments (Customer Portal + Courier App) sharing one Motoko backend actor",
-    "Customer Portal uses Internet Identity for authentication; orders are tied to logged-in user principal"
+    "Customer Portal uses Internet Identity for authentication; orders are tied to logged-in user principal",
+    "Courier App access is gated by PIN '1953'; no Internet Identity required for courier access"
   ],
   "known_issues": [],
-  "isFixRequest": false,
+  "isFixRequest": true,
   "existing_features": [
     {
       "id": "feature-build-the-customer-portal-as-the-primary-frontend-view-it-must-include-a-menu-browsing-page-showing-available-food-items-grouped-by-category-with-names-descriptions-and-prices-a-shopping-cart-sidebar-or-panel-where-customers-can-add-remove-items-and-see-the-running-total-a-checkout-form-collecting-customer-name-and-phone-number-and-an-order-confirmation-screen-showing-the-assigned-orderid-and-initial-status",
@@ -63,6 +64,54 @@
       "title": "Build an 'Account' view inside the Customer Portal. Display and allow editing of the logged-in user's saved name and phone number using getProfile and saveProfile. Also show a summary of the user's recent orders. The checkout form must pre-fill name and phone from the saved profile when the user is authenticated.",
       "reqIds": [
         "REQ-10"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-frontend-router-so-that-navigating-to-courier-correctly-renders-the-courierapp-page-component-instead-of-a-not-found-page-the-root-route-must-continue-to-render-the-customerportal-both-routes-must-be-registered-and-handled-by-tanstack-router-in-app-tsx",
+      "title": "Fix the frontend router so that navigating to '/courier' correctly renders the CourierApp page component instead of a Not Found page. The root '/' route must continue to render the CustomerPortal. Both routes must be registered and handled by TanStack Router in App.tsx.",
+      "reqIds": [
+        "REQ-12"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-diagnose-and-fix-the-courier-app-dashboard-so-that-orders-are-successfully-fetched-and-rendered-the-useallorders-hook-in-frontend-src-hooks-usequeries-ts-must-correctly-call-the-backend-getallorders-function-via-the-actor-the-courierapp-page-component-must-handle-loading-error-and-empty-states-gracefully-and-render-the-full-list-of-orders-when-data-is-returned-ensure-the-actor-is-initialized-before-the-query-runs-do-not-call-getallorders-on-a-null-or-undefined-actor",
+      "title": "Diagnose and fix the Courier App dashboard so that orders are successfully fetched and rendered. The `useAllOrders` hook in `frontend/src/hooks/useQueries.ts` must correctly call the backend `getAllOrders` function via the actor. The `CourierApp` page component must handle loading, error, and empty states gracefully, and render the full list of orders when data is returned. Ensure the actor is initialized before the query runs (do not call `getAllOrders` on a null or undefined actor).",
+      "reqIds": [
+        "REQ-13"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-rename-the-app-to-the-deccan-bhojan-everywhere-it-appears-in-the-frontend-page-titles-navigation-headers-footer-branding-html-title-tags-and-any-hardcoded-strings-in-both-the-customer-portal-and-courier-app",
+      "title": "Rename the app to 'The Deccan BHOJAN' everywhere it appears in the frontend: page titles, navigation headers, footer branding, HTML <title> tags, and any hardcoded strings in both the Customer Portal and Courier App.",
+      "reqIds": [
+        "REQ-14"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-react-query-mutation-hooks-for-the-four-new-menu-management-backend-functions-addmenuitem-updatemenuitem-togglemenuitemavailability-deletemenuitem-in-frontend-src-hooks-usequeries-ts-each-mutation-must-invalidate-the-menu-query-on-success-so-the-ui-reflects-the-latest-state",
+      "title": "Add React Query mutation hooks for the four new menu management backend functions (addMenuItem, updateMenuItem, toggleMenuItemAvailability, deleteMenuItem) in frontend/src/hooks/useQueries.ts. Each mutation must invalidate the menu query on success so the UI reflects the latest state.",
+      "reqIds": [
+        "REQ-16"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-dedicated-menu-management-section-to-the-courier-app-frontend-src-pages-courierapp-tsx-this-section-must-be-accessible-via-a-tab-or-clearly-labelled-button-in-the-courier-app-s-internal-navigation-it-must-display-all-existing-menu-items-fetched-via-usemenu-in-a-card-or-table-layout-and-provide-the-following-controls-per-item-an-edit-button-opening-an-inline-form-or-modal-to-update-name-description-price-and-category-a-toggle-switch-or-button-to-enable-disable-availability-and-a-delete-button-with-a-confirmation-prompt-a-separate-add-item-button-must-open-a-form-modal-to-create-a-new-menu-item-with-fields-for-name-description-price-and-category-all-actions-must-use-the-mutation-hooks-from-req-16-and-reflect-changes-immediately-upon-success",
+      "title": "Add a dedicated 'Menu Management' section to the Courier App (frontend/src/pages/CourierApp.tsx). This section must be accessible via a tab or clearly labelled button in the Courier App's internal navigation. It must display all existing menu items (fetched via useMenu) in a card or table layout and provide the following controls per item: an Edit button opening an inline form or modal to update name, description, price, and category; a toggle switch or button to enable/disable availability; and a Delete button with a confirmation prompt. A separate 'Add Item' button must open a form/modal to create a new menu item with fields for name, description, price, and category. All actions must use the mutation hooks from REQ-16 and reflect changes immediately upon success.",
+      "reqIds": [
+        "REQ-17"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-pin-based-access-gate-to-the-courier-app-at-courier-when-a-user-visits-the-route-they-must-first-see-a-pin-entry-screen-styled-with-the-app-s-warm-orange-cream-theme-instead-of-the-dashboard-if-the-user-enters-the-pin-1953-and-submits-access-is-granted-and-the-full-courier-app-dashboard-is-shown-if-the-pin-is-incorrect-display-a-clear-error-message-the-granted-access-state-must-be-persisted-in-localstorage-so-the-user-does-not-need-to-re-enter-the-pin-on-page-refresh-a-lock-or-sign-out-button-must-be-visible-in-the-courier-app-ui-to-clear-the-access-state-and-return-the-user-to-the-pin-entry-screen-remove-or-bypass-any-existing-internet-identity-role-based-access-control-checks-that-are-currently-blocking-users-in-courierapp-tsx",
+      "title": "Add a PIN-based access gate to the Courier App at '/courier'. When a user visits the route, they must first see a PIN entry screen (styled with the app's warm orange/cream theme) instead of the dashboard. If the user enters the PIN '1953' and submits, access is granted and the full Courier App dashboard is shown. If the PIN is incorrect, display a clear error message. The granted access state must be persisted in localStorage so the user does not need to re-enter the PIN on page refresh. A 'Lock' or 'Sign Out' button must be visible in the Courier App UI to clear the access state and return the user to the PIN entry screen. Remove or bypass any existing Internet Identity / role-based access control checks that are currently blocking users in CourierApp.tsx.",
+      "reqIds": [
+        "REQ-18"
       ],
       "version": 1
     }
@@ -134,6 +183,32 @@
       "reqIds": [
         "REQ-11"
       ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-15",
+      "summary": "Rename the app to 'The Deccan BHOJAN' across both the Customer Portal and Courier App",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-16",
+      "summary": "Add a Menu Management section to the Courier App allowing: add new menu items, edit existing items (name, description, price, category), toggle item availability, and delete items permanently",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-18",
+      "summary": "Add backend support for full menu management: expose addMenuItem, updateMenuItem, toggleMenuItemAvailability, and deleteMenuItem functions in the Motoko actor. addMenuItem accepts name, description, price, and category and returns the new item. updateMenuItem accepts itemId plus updatable fields. toggleMenuItemAvailability accepts itemId and flips the availability boolean. deleteMenuItem accepts itemId and removes the item permanently.",
+      "reqIds": [
+        "REQ-15"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-19",
+      "summary": "Add a PIN-based access gate to the Courier App. Visiting /courier shows a PIN entry screen; entering '1953' grants access to the full dashboard. Wrong PIN shows an error. Access persists in localStorage. A 'Lock' button lets the courier log out of the Courier App.",
+      "reqIds": [],
       "status": "pending"
     }
   ],

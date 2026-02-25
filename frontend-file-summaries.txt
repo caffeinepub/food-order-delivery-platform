@@ -1,7 +1,7 @@
 {
-  "frontend/src/index.css": "Global styles with OKLCH color system using warm food delivery palette (deep orange primary, cream secondary, charcoal text), custom Sora/Inter fonts, status badge utility classes, hero gradient, and card hover animations.",
+  "frontend/src/index.css": "Global styles with OKLCH warm food delivery palette, custom Sora/Inter fonts, status badge utilities (now using plain CSS OKLCH values instead of `@apply` with opacity modifiers to avoid Tailwind resolution errors), hero gradient, card hover and shake animations.",
   "frontend/tailwind.config.js": "Extended Tailwind config with Sora display font, Inter body font, custom border radii, card shadow tokens, and slide/fade animation keyframes for the food delivery theme.",
-  "frontend/src/hooks/useQueries.ts": "React Query hooks for all backend operations including updated placeOrder (uses OrderInput without customerId), new useGetMyOrders, useGetCallerProfile, and useSaveCallerProfile hooks.",
+  "frontend/src/hooks/useQueries.ts": "React Query hooks for all backend operations; adds four new menu management mutation hooks (useAddMenuItem, useUpdateMenuItem, useToggleMenuItemAvailability, useDeleteMenuItem) that each invalidate the menu cache on success, and fixes the useSeedMenu hook to use the correct MenuItemInput object signature.",
   "frontend/src/hooks/useCart.ts": "Custom hook managing shopping cart state with sessionStorage persistence, providing add/remove/update/clear operations and computed total/itemCount.",
   "frontend/src/components/Navigation.tsx": "Sticky top navigation bar with FoodRush logo, links to Customer Portal and Courier Dashboard, active state highlighting, and responsive mobile hamburger menu.",
   "frontend/src/components/Layout.tsx": "Shared layout wrapper using TanStack Router's Outlet, composing Navigation at top and a footer with dynamic year and caffeine.ai attribution link.",
@@ -13,12 +13,16 @@
   "frontend/src/components/OrderCard.tsx": "Courier-facing order card updated to use CustomerOrder type (with Principal customerId displayed as truncated string) and status advance/cancel actions.",
   "frontend/src/components/OrderFilters.tsx": "Horizontal scrollable filter pill bar for the courier dashboard, showing all status options with per-status order counts and active highlight.",
   "frontend/src/pages/CustomerPortal.tsx": "Main customer-facing page with CustomerNavigation, view state machine for Browse Menu/My Orders/Account tabs, checkout/confirmation flow, profile setup modal, and cart management.",
-  "frontend/src/pages/CourierApp.tsx": "Standalone Courier Dashboard with its own header/footer, order management with status controls, no links to the Customer Portal.",
-  "frontend/src/App.tsx": "Root app component with TanStack Router setup for the Customer Portal only — single route at '/' using CustomerPortalLayout as the root shell.",
-  "frontend/src/components/CustomerPortalLayout.tsx": "Minimal layout shell for the Customer Portal with a footer containing dynamic year and caffeine.ai attribution; replaces the old shared Layout component.",
+  "frontend/src/pages/CourierApp.tsx": "Courier Dashboard that now uses PIN-based access (useCourierAccess) instead of Internet Identity — renders CourierPinGate when locked, shows full dashboard with Lock button when PIN is verified, removing all Internet Identity and role-check logic.",
+  "frontend/src/App.tsx": "Root app component with TanStack Router setup registering both the `/` (CustomerPortal with layout) and `/courier` (CourierApp standalone) routes, fixing the Not Found error on the courier path.",
+  "frontend/src/components/CustomerPortalLayout.tsx": "Layout shell for the Customer Portal with footer updated to display \"The Deccan BHOJAN\" branding.",
   "frontend/src/components/LoginButton.tsx": "Internet Identity login/logout button component that handles authentication flow, clears query cache on logout, and shows loading state during sign-in.",
-  "frontend/src/components/CustomerNavigation.tsx": "Customer Portal sticky navigation bar with Browse Menu, My Orders, and Account tabs plus a LoginButton; no links to the Courier App.",
+  "frontend/src/components/CustomerNavigation.tsx": "Customer Portal sticky navigation bar updated to display \"The Deccan BHOJAN\" branding in place of \"FoodRush\".",
   "frontend/src/components/ProfileSetupModal.tsx": "First-time user profile setup modal that prompts authenticated users without a profile to enter their name and phone number; prevents dismissal until saved.",
   "frontend/src/components/MyOrdersView.tsx": "My Orders view showing the authenticated user's full order history sorted newest first, with login prompt for unauthenticated users and empty state handling.",
-  "frontend/src/components/AccountView.tsx": "Account view with editable profile form (name/phone) pre-filled from saved profile, save functionality, and a recent orders summary section."
+  "frontend/src/components/AccountView.tsx": "Account view with editable profile form (name/phone) pre-filled from saved profile, save functionality, and a recent orders summary section.",
+  "frontend/index.html": "HTML entry point with updated browser tab title set to \"The Deccan BHOJAN\".",
+  "frontend/src/components/MenuManagementSection.tsx": "New component for the Courier App that lists all menu items grouped by category with availability toggle, edit (via pre-filled dialog), and delete (with confirmation) actions, plus an Add Item button — all wired to the new menu mutation hooks.",
+  "frontend/src/hooks/useCourierAccess.ts": "Custom hook managing courier PIN access state with localStorage persistence, exposing hasAccess boolean and grantAccess/revokeAccess functions.",
+  "frontend/src/components/CourierPinGate.tsx": "PIN entry screen for the Courier App using InputOTP component, auto-submits on 4 digits, shows shake animation and error message on wrong PIN, styled with the app's warm orange/cream theme."
 }

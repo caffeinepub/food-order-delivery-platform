@@ -39,12 +39,12 @@ export function CustomerNavigation({ activeView, onViewChange }: CustomerNavigat
             <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0">
               <img
                 src="/assets/generated/logo-icon.dim_256x256.png"
-                alt="FoodRush Logo"
+                alt="The Deccan BHOJAN Logo"
                 className="w-full h-full object-cover"
               />
             </div>
             <span className="font-display font-800 text-xl text-foreground tracking-tight">
-              Food<span className="text-primary">Rush</span>
+              The Deccan <span className="text-primary">BHOJAN</span>
             </span>
           </button>
 

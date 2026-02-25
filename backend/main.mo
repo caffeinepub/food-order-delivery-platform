@@ -5,12 +5,10 @@ import Runtime "mo:core/Runtime";
 import Time "mo:core/Time";
 import Principal "mo:core/Principal";
 import Order "mo:core/Order";
-import Migration "migration";
 import Iter "mo:core/Iter";
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
 
-(with migration = Migration.run)
 actor {
   type OrderStatus = {
     #pending;
@@ -28,6 +26,21 @@ actor {
     price : Float;
     category : Text;
     available : Bool;
+  };
+
+  type MenuItemInput = {
+    name : Text;
+    description : Text;
+    price : Float;
+    category : Text;
+  };
+
+  type MenuItemUpdate = {
+    itemId : Text;
+    name : ?Text;
+    description : ?Text;
+    price : ?Float;
+    category : ?Text;
   };
 
   module MenuItem {
@@ -111,33 +124,85 @@ actor {
 
   // ---- Menu management (admin-only writes, public reads) ----
 
-  public shared ({ caller }) func addMenuItem(itemId : Text, name : Text, description : Text, price : Float, category : Text, available : Bool) : async () {
+  public shared ({ caller }) func addMenuItem(input : MenuItemInput) : async MenuItem {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can add menu items");
     };
+
+    let itemId = generateUniqueId(input.name, input.category);
+
     let newItem : MenuItem = {
       itemId;
-      name;
-      description;
-      price;
-      category;
-      available;
+      name = input.name;
+      description = input.description;
+      price = input.price;
+      category = input.category;
+      available = true;
     };
+
     menu.add(itemId, newItem);
+    newItem;
   };
 
-  public shared ({ caller }) func updateMenuItemAvailability(itemId : Text, available : Bool) : async () {
+  public shared ({ caller }) func updateMenuItem(update : MenuItemUpdate) : async MenuItem {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can update menu items");
     };
+    switch (menu.get(update.itemId)) {
+      case (null) { Runtime.trap("Item not found") };
+      case (?item) {
+        let updatedItem = {
+          item with
+          name = switch (update.name) {
+            case (null) { item.name };
+            case (?newName) { newName };
+          };
+          description = switch (update.description) {
+            case (null) { item.description };
+            case (?newDescription) { newDescription };
+          };
+          price = switch (update.price) {
+            case (null) { item.price };
+            case (?newPrice) { newPrice };
+          };
+          category = switch (update.category) {
+            case (null) { item.category };
+            case (?newCategory) { newCategory };
+          };
+        };
+        menu.add(update.itemId, updatedItem);
+        updatedItem;
+      };
+    };
+  };
+
+  public shared ({ caller }) func toggleMenuItemAvailability(itemId : Text) : async MenuItem {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can toggle menu item availability");
+    };
+
     switch (menu.get(itemId)) {
       case (null) { Runtime.trap("Item not found") };
       case (?item) {
         let updatedItem = {
           item with
-          available
+          available = not item.available;
         };
         menu.add(itemId, updatedItem);
+        updatedItem;
+      };
+    };
+  };
+
+  public shared ({ caller }) func deleteMenuItem(itemId : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can delete menu items");
+    };
+
+    switch (menu.get(itemId)) {
+      case (null) { Runtime.trap("Item not found") };
+      case (?_item) {
+        menu.remove(itemId);
       };
     };
   };
@@ -150,9 +215,14 @@ actor {
     menu.values().toArray().filter(func(item) { item.category == category and item.available }).sort();
   };
 
+  func generateUniqueId(name : Text, category : Text) : Text {
+    let timestamp = Time.now().toText();
+    name # "_" # category # "_" # timestamp;
+  };
+
   // ---- Order management ----
 
-  public type OrderInput = {
+  type OrderInput = {
     orderId : Text;
     items : [OrderItem];
   };

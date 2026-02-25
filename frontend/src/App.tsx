@@ -1,20 +1,38 @@
-import { createRouter, createRoute, createRootRoute, RouterProvider } from '@tanstack/react-router';
+import { createRouter, createRoute, createRootRoute, RouterProvider, Outlet } from '@tanstack/react-router';
 import { CustomerPortalLayout } from './components/CustomerPortalLayout';
 import { CustomerPortal } from './pages/CustomerPortal';
+import { CourierApp } from './pages/CourierApp';
 
-// Root route with customer portal layout
+// Root route — renders children directly
 const rootRoute = createRootRoute({
+  component: () => <Outlet />,
+});
+
+// Customer portal layout route
+const customerLayoutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: 'customerLayout',
   component: CustomerPortalLayout,
 });
 
-// Customer portal route
+// Customer portal index route
 const indexRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => customerLayoutRoute,
   path: '/',
   component: CustomerPortal,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute]);
+// Courier app route — standalone, no shared layout
+const courierRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/courier',
+  component: CourierApp,
+});
+
+const routeTree = rootRoute.addChildren([
+  customerLayoutRoute.addChildren([indexRoute]),
+  courierRoute,
+]);
 
 const router = createRouter({ routeTree });
 

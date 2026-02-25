@@ -1,18 +1,13 @@
 # Specification
 
 ## Summary
-**Goal:** Add Internet Identity authentication, customer profiles, My Orders and Account views, and a dedicated Customer Portal navigation bar to the Food Delivery App.
+**Goal:** Add a PIN-based access gate to the Courier App at `/courier`, replacing any existing Internet Identity / role-based access checks with a simple PIN entry screen.
 
 **Planned changes:**
-- Integrate Internet Identity login/logout into the Customer Portal navigation bar, supporting passkeys, Google, Apple, and Microsoft sign-in methods
-- Add protected routes for My Orders and Account tabs that redirect unauthenticated users to a login prompt
-- Add backend customer profile system storing name and phone number keyed by Internet Identity principal, with `getProfile` and `saveProfile` functions
-- Update `placeOrder` to record the caller's principal as `customerId` and add `getOrdersByCustomer` to return orders by principal
-- Add a Customer Portal navigation bar with three tabs: Browse Menu, My Orders, and Account
-- Remove any cross-app navigation links between the Customer Portal and the Courier App
-- Build a My Orders view displaying the authenticated user's full order history (orderId, date/time, items, total, status badge), sorted newest first, with an empty state
-- Build an Account view displaying and allowing editing of the user's saved name and phone, plus a summary of recent orders
-- Pre-fill checkout form name and phone from the saved profile when the user is authenticated
-- Create a backend migration file (`backend/migration.mo`) with pre/post-upgrade hooks to preserve existing orders and menu items while adding the new customer profiles stable map
+- Add a PIN entry screen that renders when a user visits `/courier` without a stored access token; the screen uses the app's warm orange/cream theme.
+- Entering PIN `1953` grants access and shows the full Courier App dashboard; any other PIN shows a visible error message.
+- Persist the granted access state in `localStorage` so the dashboard is shown on page refresh without re-entering the PIN.
+- Add a "Lock" button in the Courier App UI that clears the stored access state and returns the user to the PIN entry screen.
+- Remove or bypass any existing Internet Identity / role-based access control checks in `CourierApp.tsx` that currently block users.
 
-**User-visible outcome:** Customers can log in with Internet Identity, view and edit their profile, see their full order history, and have checkout pre-filled from their saved profile — all within a self-contained Customer Portal with its own navigation.
+**User-visible outcome:** Visiting `/courier` shows a themed PIN entry screen. Entering `1953` grants immediate access to the full dashboard, which persists across refreshes. A Lock button lets the courier log out back to the PIN screen.

@@ -1,56 +1,26 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-25T12:44:37.412Z",
-  "summary": "The diff implements the vast majority of all six requirements. REQ-6 through REQ-10 are well-covered with Internet Identity login/logout, customer profile system, navigation bar, My Orders view, Account view, and checkout pre-fill. REQ-11 migration.mo is present. One minor gap exists: the REQ-7 AC requires saveProfile(principal, name, phone) as a standalone function taking a principal parameter, but the implementation uses caller-based functions. The REQ-8 AC about removing the top-level shared navigation from the Customer Portal is addressed via CustomerPortalLayout replacing the old shared Layout. The Courier App has no link to Customer Portal.",
-  "missing_requirements": [
-    {
-      "id": "REQ-7",
-      "requirement": "Expose saveProfile(principal, name, phone) taking an explicit principal parameter as specified in the AC",
-      "reason": "The backend exposes saveCallerUserProfile(profile) and saveProfile(name, phone) which both use the caller's principal implicitly, not an explicit principal argument as specified in the requirement. The getProfile(principal) function exists but saveProfile signature does not match the spec's 'saveProfile(principal, name, phone)'.",
-      "evidence": [
-        "backend/main.mo"
-      ]
-    }
-  ],
+  "generatedAt": "2026-02-25T16:44:07.530Z",
+  "summary": "The diff implements REQ-18 comprehensively. A new PIN gate component (CourierPinGate.tsx) and access hook (useCourierAccess.ts) are added, CourierApp.tsx is updated to use PIN-based access instead of Internet Identity, localStorage persistence is implemented, a Lock button is present in the dashboard header, error feedback with shake animation is included, and the warm orange/cream theme is applied throughout. All acceptance criteria appear to be satisfied.",
+  "missing_requirements": [],
   "hallucinated_features": [
     {
-      "description": "ProfileSetupModal: A modal dialog that prompts new authenticated users to set up their profile immediately after first login",
-      "reason": "No requirement or AC mentions a profile setup modal or onboarding flow for new users. This is additional UX not requested in the build spec.",
+      "description": "The CourierPinGate component computes an appId variable from window.location.hostname that is never used in the PIN validation logic or UI — it is dead code not requested by the spec.",
+      "reason": "The build request specifies no dynamic app ID derivation or hostname-based logic for the PIN gate; the PIN '1953' is the sole credential and no hostname scoping was requested.",
       "evidence": [
-        "frontend/src/components/ProfileSetupModal.tsx",
-        "frontend/src/pages/CustomerPortal.tsx"
-      ]
-    },
-    {
-      "description": "urlParams.ts utility file with URL parameter parsing, sessionStorage persistence, and hash-based routing parameter utilities",
-      "reason": "No requirement mentions URL parameter utilities or sessionStorage-based parameter persistence. This appears to be infrastructure not requested in any REQ.",
-      "evidence": [
-        "frontend/src/utils/urlParams.ts"
+        "frontend/src/components/CourierPinGate.tsx",
+        "frontend/src/pages/CourierApp.tsx"
       ]
     }
   ],
-  "confidence": 0.82,
+  "confidence": 0.91,
   "changed_files": [
-    "backend/main.mo",
-    "backend/migration.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/App.tsx",
-    "frontend/src/components/AccountView.tsx",
-    "frontend/src/components/CheckoutForm.tsx",
-    "frontend/src/components/CustomerNavigation.tsx",
-    "frontend/src/components/CustomerPortalLayout.tsx",
-    "frontend/src/components/Layout.tsx",
-    "frontend/src/components/LoginButton.tsx",
-    "frontend/src/components/MyOrdersView.tsx",
-    "frontend/src/components/Navigation.tsx",
-    "frontend/src/components/OrderCard.tsx",
-    "frontend/src/components/ProfileSetupModal.tsx",
-    "frontend/src/hooks/useActor.ts",
-    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/components/CourierPinGate.tsx",
+    "frontend/src/hooks/useCourierAccess.ts",
+    "frontend/src/index.css",
     "frontend/src/pages/CourierApp.tsx",
-    "frontend/src/pages/CustomerPortal.tsx",
-    "frontend/src/utils/urlParams.ts",
     "project_state.json"
   ]
 }

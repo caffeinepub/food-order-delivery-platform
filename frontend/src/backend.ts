@@ -105,17 +105,30 @@ export interface MenuItem {
     category: string;
     price: number;
 }
+export interface MenuItemUpdate {
+    itemId: string;
+    name?: string;
+    description?: string;
+    category?: string;
+    price?: number;
+}
 export interface OrderInput {
     orderId: string;
     items: Array<OrderItem>;
+}
+export interface OrderItem {
+    itemName: string;
+    quantity: bigint;
+    price: number;
 }
 export interface CustomerProfile {
     name: string;
     phone: string;
 }
-export interface OrderItem {
-    itemName: string;
-    quantity: bigint;
+export interface MenuItemInput {
+    name: string;
+    description: string;
+    category: string;
     price: number;
 }
 export enum OrderStatus {
@@ -133,9 +146,10 @@ export enum UserRole {
 }
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
-    addMenuItem(itemId: string, name: string, description: string, price: number, category: string, available: boolean): Promise<void>;
+    addMenuItem(input: MenuItemInput): Promise<MenuItem>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     cancelOrder(orderId: string): Promise<void>;
+    deleteMenuItem(itemId: string): Promise<void>;
     getAllOrders(): Promise<Array<CustomerOrder>>;
     getCallerUserProfile(): Promise<CustomerProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
@@ -149,10 +163,11 @@ export interface backendInterface {
     placeOrder(order: OrderInput): Promise<void>;
     saveCallerUserProfile(profile: CustomerProfile): Promise<void>;
     saveProfile(name: string, phone: string): Promise<void>;
-    updateMenuItemAvailability(itemId: string, available: boolean): Promise<void>;
+    toggleMenuItemAvailability(itemId: string): Promise<MenuItem>;
+    updateMenuItem(update: MenuItemUpdate): Promise<MenuItem>;
     updateOrderStatus(orderId: string, status: OrderStatus): Promise<void>;
 }
-import type { CustomerOrder as _CustomerOrder, CustomerProfile as _CustomerProfile, OrderItem as _OrderItem, OrderStatus as _OrderStatus, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
+import type { CustomerOrder as _CustomerOrder, CustomerProfile as _CustomerProfile, MenuItemUpdate as _MenuItemUpdate, OrderItem as _OrderItem, OrderStatus as _OrderStatus, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _initializeAccessControlWithSecret(arg0: string): Promise<void> {
@@ -169,17 +184,17 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async addMenuItem(arg0: string, arg1: string, arg2: string, arg3: number, arg4: string, arg5: boolean): Promise<void> {
+    async addMenuItem(arg0: MenuItemInput): Promise<MenuItem> {
         if (this.processError) {
             try {
-                const result = await this.actor.addMenuItem(arg0, arg1, arg2, arg3, arg4, arg5);
+                const result = await this.actor.addMenuItem(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.addMenuItem(arg0, arg1, arg2, arg3, arg4, arg5);
+            const result = await this.actor.addMenuItem(arg0);
             return result;
         }
     }
@@ -208,6 +223,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.cancelOrder(arg0);
+            return result;
+        }
+    }
+    async deleteMenuItem(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteMenuItem(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteMenuItem(arg0);
             return result;
         }
     }
@@ -393,31 +422,45 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async updateMenuItemAvailability(arg0: string, arg1: boolean): Promise<void> {
+    async toggleMenuItemAvailability(arg0: string): Promise<MenuItem> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateMenuItemAvailability(arg0, arg1);
+                const result = await this.actor.toggleMenuItemAvailability(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateMenuItemAvailability(arg0, arg1);
+            const result = await this.actor.toggleMenuItemAvailability(arg0);
+            return result;
+        }
+    }
+    async updateMenuItem(arg0: MenuItemUpdate): Promise<MenuItem> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateMenuItem(to_candid_MenuItemUpdate_n11(this._uploadFile, this._downloadFile, arg0));
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateMenuItem(to_candid_MenuItemUpdate_n11(this._uploadFile, this._downloadFile, arg0));
             return result;
         }
     }
     async updateOrderStatus(arg0: string, arg1: OrderStatus): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateOrderStatus(arg0, to_candid_OrderStatus_n11(this._uploadFile, this._downloadFile, arg1));
+                const result = await this.actor.updateOrderStatus(arg0, to_candid_OrderStatus_n13(this._uploadFile, this._downloadFile, arg1));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateOrderStatus(arg0, to_candid_OrderStatus_n11(this._uploadFile, this._downloadFile, arg1));
+            const result = await this.actor.updateOrderStatus(arg0, to_candid_OrderStatus_n13(this._uploadFile, this._downloadFile, arg1));
             return result;
         }
     }
@@ -485,13 +528,37 @@ function from_candid_variant_n7(_uploadFile: (file: ExternalBlob) => Promise<Uin
 function from_candid_vec_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_CustomerOrder>): Array<CustomerOrder> {
     return value.map((x)=>from_candid_CustomerOrder_n4(_uploadFile, _downloadFile, x));
 }
-function to_candid_OrderStatus_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: OrderStatus): _OrderStatus {
-    return to_candid_variant_n12(_uploadFile, _downloadFile, value);
+function to_candid_MenuItemUpdate_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: MenuItemUpdate): _MenuItemUpdate {
+    return to_candid_record_n12(_uploadFile, _downloadFile, value);
+}
+function to_candid_OrderStatus_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: OrderStatus): _OrderStatus {
+    return to_candid_variant_n14(_uploadFile, _downloadFile, value);
 }
 function to_candid_UserRole_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
     return to_candid_variant_n2(_uploadFile, _downloadFile, value);
 }
-function to_candid_variant_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: OrderStatus): {
+function to_candid_record_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    itemId: string;
+    name?: string;
+    description?: string;
+    category?: string;
+    price?: number;
+}): {
+    itemId: string;
+    name: [] | [string];
+    description: [] | [string];
+    category: [] | [string];
+    price: [] | [number];
+} {
+    return {
+        itemId: value.itemId,
+        name: value.name ? candid_some(value.name) : candid_none(),
+        description: value.description ? candid_some(value.description) : candid_none(),
+        category: value.category ? candid_some(value.category) : candid_none(),
+        price: value.price ? candid_some(value.price) : candid_none()
+    };
+}
+function to_candid_variant_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: OrderStatus): {
     preparing: null;
 } | {
     cancelled: null;

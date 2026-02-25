@@ -15,7 +15,7 @@ export function CustomerPortalLayout() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <span className="font-display font-semibold text-foreground">
-                Food<span className="text-primary">Rush</span>
+                The Deccan <span className="text-primary">BHOJAN</span>
               </span>
               <span>© {new Date().getFullYear()}</span>
             </div>

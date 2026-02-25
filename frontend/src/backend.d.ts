@@ -23,17 +23,30 @@ export interface MenuItem {
     category: string;
     price: number;
 }
+export interface MenuItemUpdate {
+    itemId: string;
+    name?: string;
+    description?: string;
+    category?: string;
+    price?: number;
+}
 export interface OrderInput {
     orderId: string;
     items: Array<OrderItem>;
+}
+export interface OrderItem {
+    itemName: string;
+    quantity: bigint;
+    price: number;
 }
 export interface CustomerProfile {
     name: string;
     phone: string;
 }
-export interface OrderItem {
-    itemName: string;
-    quantity: bigint;
+export interface MenuItemInput {
+    name: string;
+    description: string;
+    category: string;
     price: number;
 }
 export enum OrderStatus {
@@ -50,9 +63,10 @@ export enum UserRole {
     guest = "guest"
 }
 export interface backendInterface {
-    addMenuItem(itemId: string, name: string, description: string, price: number, category: string, available: boolean): Promise<void>;
+    addMenuItem(input: MenuItemInput): Promise<MenuItem>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     cancelOrder(orderId: string): Promise<void>;
+    deleteMenuItem(itemId: string): Promise<void>;
     getAllOrders(): Promise<Array<CustomerOrder>>;
     getCallerUserProfile(): Promise<CustomerProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
@@ -66,6 +80,7 @@ export interface backendInterface {
     placeOrder(order: OrderInput): Promise<void>;
     saveCallerUserProfile(profile: CustomerProfile): Promise<void>;
     saveProfile(name: string, phone: string): Promise<void>;
-    updateMenuItemAvailability(itemId: string, available: boolean): Promise<void>;
+    toggleMenuItemAvailability(itemId: string): Promise<MenuItem>;
+    updateMenuItem(update: MenuItemUpdate): Promise<MenuItem>;
     updateOrderStatus(orderId: string, status: OrderStatus): Promise<void>;
 }

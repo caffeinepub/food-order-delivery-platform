@@ -1,149 +1,45 @@
 {
   "kind": "build_request",
-  "title": "Add Internet Identity login, customer profiles, and My Orders/Account navigation to Customer Portal",
-  "projectName": "Food Delivery App",
+  "title": "Add PIN-based access gate to the Courier App",
+  "projectName": "The Deccan BHOJAN",
   "priority": "normal",
   "requirements": [
     {
-      "id": "REQ-6",
-      "text": "Integrate Internet Identity authentication into the Customer Portal. Add login/logout controls to the navigation bar. Protected routes (My Orders, Account) should redirect unauthenticated users to a login prompt. Support passkeys, Google, Apple, and Microsoft sign-in methods via Internet Identity.",
+      "id": "REQ-18",
+      "text": "Add a PIN-based access gate to the Courier App at '/courier'. When a user visits the route, they must first see a PIN entry screen (styled with the app's warm orange/cream theme) instead of the dashboard. If the user enters the PIN '1953' and submits, access is granted and the full Courier App dashboard is shown. If the PIN is incorrect, display a clear error message. The granted access state must be persisted in localStorage so the user does not need to re-enter the PIN on page refresh. A 'Lock' or 'Sign Out' button must be visible in the Courier App UI to clear the access state and return the user to the PIN entry screen. Remove or bypass any existing Internet Identity / role-based access control checks that are currently blocking users in CourierApp.tsx.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4",
-          "msg-10"
+          "msg-6",
+          "msg-7",
+          "msg-8"
         ],
         "quotes": [
-          "Internet Identity login (passkeys, Google, Apple, Microsoft)"
+          "make it so that when the pin 1953 is typed it gives admin access",
+          "Visiting `/courier` shows a PIN entry screen; entering '1953' grants access to the full dashboard. Wrong PIN shows an error. Access persists in localStorage. A 'Lock' button lets the courier log out of the Courier App."
         ]
       },
       "acceptanceCriteria": [
-        "A login button is visible in the Customer Portal nav when the user is not authenticated",
-        "Clicking login opens the Internet Identity flow",
-        "After successful login, the user's principal is available in the app",
-        "Logout button is visible when authenticated and clears the session",
-        "Navigating to My Orders or Account while unauthenticated shows a login prompt or redirects to login"
-      ]
-    },
-    {
-      "id": "REQ-7",
-      "text": "Add a customer profile system to the backend. Associate a profile with each Internet Identity principal. The profile must store: name (text) and phone number (text). Expose functions: getProfile(principal) and saveProfile(principal, name, phone). Orders placed while authenticated must store the caller's principal as customerId.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-4",
-          "msg-10"
-        ],
-        "quotes": [
-          "saved name/contact info + order history",
-          "customer profiles"
-        ]
-      },
-      "acceptanceCriteria": [
-        "saveProfile stores name and phone keyed by principal",
-        "getProfile returns the saved profile for a given principal",
-        "placeOrder records the caller's principal as the customerId when called by an authenticated user",
-        "getOrdersByCustomer returns orders matching the caller's principal"
-      ]
-    },
-    {
-      "id": "REQ-8",
-      "text": "Add a navigation bar to the Customer Portal with three tabs: 'Browse Menu', 'My Orders', and 'Account'. The existing top-level shared navigation linking to the Courier Dashboard must be removed from the Customer Portal. The Courier App must have no link back to the Customer Portal.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-4",
-          "msg-10"
-        ],
-        "quotes": [
-          "Nav bar: Browse Menu · My Orders · Account",
-          "No link to Courier App",
-          "No link to Customer Portal"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Customer Portal shows a nav bar with Browse Menu, My Orders, and Account tabs",
-        "Clicking each tab switches the active view within the Customer Portal",
-        "The Customer Portal nav bar contains no link to the Courier Dashboard",
-        "The Courier App contains no link to the Customer Portal"
-      ]
-    },
-    {
-      "id": "REQ-9",
-      "text": "Build a 'My Orders' view inside the Customer Portal. When the user is authenticated, fetch and display their full order history using getOrdersByCustomer keyed by their principal. Each order entry must show: orderId, order date/time, list of items with quantities, total price, and current status badge. Orders should be sorted newest first.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-4",
-          "msg-10"
-        ],
-        "quotes": [
-          "My Orders: full order history for logged-in user"
-        ]
-      },
-      "acceptanceCriteria": [
-        "My Orders tab is visible in the Customer Portal nav bar",
-        "Authenticated users see a list of their past orders sorted newest first",
-        "Each order card displays orderId, timestamp, items, total price, and status badge",
-        "Unauthenticated users see a prompt to log in",
-        "Empty state is shown when the user has no orders"
-      ]
-    },
-    {
-      "id": "REQ-10",
-      "text": "Build an 'Account' view inside the Customer Portal. Display and allow editing of the logged-in user's saved name and phone number using getProfile and saveProfile. Also show a summary of the user's recent orders. The checkout form must pre-fill name and phone from the saved profile when the user is authenticated.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-4",
-          "msg-10"
-        ],
-        "quotes": [
-          "Account: saved name/contact + order history",
-          "checkout (pre-filled from profile)"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Account tab shows the user's saved name and phone number",
-        "User can edit and save their name and phone; changes persist via saveProfile",
-        "A summary of recent orders is displayed on the Account page",
-        "The checkout form pre-fills name and phone from the saved profile when the user is logged in",
-        "Unauthenticated users see a login prompt on the Account page"
-      ]
-    },
-    {
-      "id": "REQ-11",
-      "text": "Generate a migration file (backend/migration.mo) to preserve existing in-memory order and menu data when upgrading the backend actor to add the new customer profiles stable map. Ensure existing orders, menu items, and their state are retained after the upgrade.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-10"
-        ],
-        "quotes": [
-          "One Motoko actor powering both apps",
-          "Full order lifecycle, menu management, customer profiles"
-        ]
-      },
-      "acceptanceCriteria": [
-        "migration.mo handles pre-upgrade and post-upgrade hooks",
-        "Existing orders are preserved after canister upgrade",
-        "Existing menu items are preserved after canister upgrade",
-        "New customer profiles stable map is initialized without wiping existing data"
+        "Navigating to '/courier' without a stored access token shows a PIN entry screen and not the dashboard.",
+        "Entering '1953' and submitting grants access and renders the full Courier App dashboard.",
+        "Entering any other PIN displays a visible error message and does not grant access.",
+        "After granting access, refreshing the page still shows the dashboard (localStorage persistence).",
+        "A 'Lock' button is visible in the Courier App. Clicking it clears the stored access and returns to the PIN entry screen.",
+        "The PIN entry screen uses the app's warm orange/cream visual theme (consistent with the rest of the app).",
+        "No Internet Identity login or role-based check blocks access once the correct PIN is entered."
       ]
     }
   ],
   "constraints": [
-    "All backend logic must remain in a single Motoko actor (backend/main.mo)",
-    "Do not edit files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui",
-    "Customer Portal must have no navigation link to the Courier App",
-    "Courier App must have no navigation link to the Customer Portal"
+    "The PIN '1953' must be the only valid access credential — no Internet Identity or other auth required for the Courier App.",
+    "Do not modify any files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui.",
+    "Access state must be persisted in localStorage, not sessionStorage."
   ],
   "nonGoals": [
-    "Third-party OAuth providers outside of Internet Identity",
-    "Email or SMS notifications",
-    "Real-time order updates via WebSockets",
-    "Admin panel or restaurant management interface",
-    "Payment processing"
+    "Adding server-side PIN validation or storing the PIN in the backend.",
+    "Changing the Customer Portal authentication flow.",
+    "Adding multiple PIN codes or a PIN management system.",
+    "Encrypting or hashing the PIN in localStorage."
   ],
   "imageRequirements": {
     "required": [],
