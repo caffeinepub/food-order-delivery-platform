@@ -1,0 +1,128 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Add Internet Identity login, customer profiles, and My Orders/Account navigation to Customer Portal",
+  "requirements": [
+    {
+      "id": "REQ-6",
+      "summary": "Integrate Internet Identity authentication into the Customer Portal with login/logout controls and protected routes",
+      "acceptanceCriteria": [
+        "A login button is visible in the Customer Portal nav when the user is not authenticated",
+        "Clicking login opens the Internet Identity flow",
+        "After successful login, the user's principal is available in the app",
+        "Logout button is visible when authenticated and clears the session",
+        "Navigating to My Orders or Account while unauthenticated shows a login prompt or redirects to login"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/LoginButton.tsx",
+          "operation": "create",
+          "description": "Use the authorization component to support Internet Identity login/logout with passkeys and federated sign-in options. Create a LoginButton component that toggles between login and logout states, handles authentication flow, and clears query cache on logout. Verify the authorization component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/CustomerNavigation.tsx",
+          "operation": "create",
+          "description": "Create a Customer Portal-specific navigation bar with Browse Menu, My Orders, and Account tabs. Include the LoginButton component. Remove any links to the Courier Dashboard that previously existed in the shared Navigation component when used in the Customer Portal context."
+        },
+        {
+          "path": "frontend/src/components/ProtectedRoute.tsx",
+          "operation": "create",
+          "description": "Create a route guard component that checks authentication status and redirects unauthenticated users to a login prompt when accessing My Orders or Account views."
+        }
+      ]
+    },
+    {
+      "id": "REQ-8",
+      "summary": "Add navigation bar to Customer Portal with Browse Menu, My Orders, and Account tabs; remove cross-app navigation links",
+      "acceptanceCriteria": [
+        "Customer Portal shows a nav bar with Browse Menu, My Orders, and Account tabs",
+        "Clicking each tab switches the active view within the Customer Portal",
+        "The Customer Portal nav bar contains no link to the Courier Dashboard",
+        "The Courier App contains no link to the Customer Portal"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/CustomerPortal.tsx",
+          "operation": "modify",
+          "description": "Replace the shared Navigation component with CustomerNavigation. Add view state management to toggle between Browse Menu, My Orders, and Account views. Wire the three tabs to control which view is rendered. Keep the hero banner and menu browsing as the Browse Menu view."
+        },
+        {
+          "path": "frontend/src/pages/CourierApp.tsx",
+          "operation": "modify",
+          "description": "Remove any existing Navigation component that links back to the Customer Portal. Ensure the Courier App has no link to the Customer Portal, per the BuildRequest constraint."
+        },
+        {
+          "path": "frontend/src/components/Navigation.tsx",
+          "operation": "modify",
+          "description": "Remove the link to the Courier Dashboard from the shared Navigation component if it is still used elsewhere, or deprecate this component entirely if CustomerNavigation and standalone Courier navigation replace it."
+        }
+      ]
+    },
+    {
+      "id": "REQ-9",
+      "summary": "Build My Orders view to display authenticated user's full order history sorted newest first",
+      "acceptanceCriteria": [
+        "My Orders tab is visible in the Customer Portal nav bar",
+        "Authenticated users see a list of their past orders sorted newest first",
+        "Each order card displays orderId, timestamp, items, total price, and status badge",
+        "Unauthenticated users see a prompt to log in",
+        "Empty state is shown when the user has no orders"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Add a useGetMyOrders query hook that calls getOrdersByCustomer with the current user's principal. The hook should only be enabled when the user is authenticated. Return orders sorted by timestamp descending."
+        },
+        {
+          "path": "frontend/src/components/MyOrdersView.tsx",
+          "operation": "create",
+          "description": "Create a My Orders view component that uses the useGetMyOrders hook to fetch and display the authenticated user's order history. Show each order's orderId, timestamp, items list, total price, and status badge using the OrderStatusBadge component. Display a login prompt for unauthenticated users and an empty state when no orders exist."
+        },
+        {
+          "path": "frontend/src/pages/CustomerPortal.tsx",
+          "operation": "modify",
+          "description": "Wire the MyOrdersView component to render when the My Orders tab is active. Wrap it with the ProtectedRoute component to ensure unauthenticated users are prompted to log in."
+        }
+      ]
+    },
+    {
+      "id": "REQ-10",
+      "summary": "Build Account view to display and edit user profile (name, phone) and show recent order summary; pre-fill checkout form with saved profile",
+      "acceptanceCriteria": [
+        "Account tab shows the user's saved name and phone number",
+        "User can edit and save their name and phone; changes persist via saveProfile",
+        "A summary of recent orders is displayed on the Account page",
+        "The checkout form pre-fills name and phone from the saved profile when the user is logged in",
+        "Unauthenticated users see a login prompt on the Account page"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Add a useGetCallerProfile query hook that calls getCallerUserProfile to fetch the authenticated user's CustomerProfile (name and phone). Add a useSaveProfile mutation hook that calls saveCallerUserProfile to persist profile changes. Verify the authorization component's usage instructions before implementing profile setup logic."
+        },
+        {
+          "path": "frontend/src/components/AccountView.tsx",
+          "operation": "create",
+          "description": "Create an Account view component that fetches the user's profile using useGetCallerProfile and displays editable name and phone fields. Include a save button that triggers the useSaveProfile mutation. Show a summary of the user's recent orders below the profile form. Display a login prompt for unauthenticated users."
+        },
+        {
+          "path": "frontend/src/components/ProfileSetupModal.tsx",
+          "operation": "create",
+          "description": "Create a modal component that prompts first-time authenticated users to enter their name and phone if getCallerUserProfile returns null. Use the pattern from the authorization component's usage instructions to prevent modal flash by checking both authentication and profile fetch states."
+        },
+        {
+          "path": "frontend/src/pages/CustomerPortal.tsx",
+          "operation": "modify",
+          "description": "Wire the AccountView component to render when the Account tab is active. Wrap it with the ProtectedRoute component. Add the ProfileSetupModal to the CustomerPortal root to capture first-time user profile data after login."
+        },
+        {
+          "path": "frontend/src/components/CheckoutForm.tsx",
+          "operation": "modify",
+          "description": "Modify the CheckoutForm to pre-fill name and phone fields from the saved profile when the user is authenticated. Use the useGetCallerProfile hook to fetch the profile and populate the form fields if a profile exists."
+        }
+      ]
+    }
+  ]
+}

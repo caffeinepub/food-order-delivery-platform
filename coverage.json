@@ -1,0 +1,128 @@
+{
+  "kind": "coverage_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-25T12:44:37.416Z",
+  "sources": {
+    "buildRequest": true,
+    "implementationPlan": true
+  },
+  "requirements": {
+    "total": 6,
+    "implemented": 4,
+    "items": [
+      {
+        "id": "REQ-10",
+        "summary": "Build an 'Account' view inside the Customer Portal. Display and allow editing of the logged-in user's saved name and phone number using getProfile and saveProfile. Also show a summary of the user's recent orders. The checkout form must pre-fill name and phone from the saved profile when the user is authenticated.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/AccountView.tsx",
+          "frontend/src/components/ProfileSetupModal.tsx",
+          "frontend/src/pages/CustomerPortal.tsx",
+          "frontend/src/components/CheckoutForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/AccountView.tsx",
+          "frontend/src/components/ProfileSetupModal.tsx",
+          "frontend/src/pages/CustomerPortal.tsx",
+          "frontend/src/components/CheckoutForm.tsx"
+        ]
+      },
+      {
+        "id": "REQ-11",
+        "summary": "Generate a migration file (backend/migration.mo) to preserve existing in-memory order and menu data when upgrading the backend actor to add the new customer profiles stable map. Ensure existing orders, menu items, and their state are retained after the upgrade.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-6",
+        "summary": "Integrate Internet Identity authentication into the Customer Portal. Add login/logout controls to the navigation bar. Protected routes (My Orders, Account) should redirect unauthenticated users to a login prompt. Support passkeys, Google, Apple, and Microsoft sign-in methods via Internet Identity.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/LoginButton.tsx",
+          "frontend/src/components/CustomerNavigation.tsx",
+          "frontend/src/components/ProtectedRoute.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/LoginButton.tsx",
+          "frontend/src/components/CustomerNavigation.tsx"
+        ]
+      },
+      {
+        "id": "REQ-7",
+        "summary": "Add a customer profile system to the backend. Associate a profile with each Internet Identity principal. The profile must store: name (text) and phone number (text). Expose functions: getProfile(principal) and saveProfile(principal, name, phone). Orders placed while authenticated must store the caller's principal as customerId.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-8",
+        "summary": "Add a navigation bar to the Customer Portal with three tabs: 'Browse Menu', 'My Orders', and 'Account'. The existing top-level shared navigation linking to the Courier Dashboard must be removed from the Customer Portal. The Courier App must have no link back to the Customer Portal.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/CustomerPortal.tsx",
+          "frontend/src/pages/CourierApp.tsx",
+          "frontend/src/components/Navigation.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/CustomerPortal.tsx",
+          "frontend/src/pages/CourierApp.tsx",
+          "frontend/src/components/Navigation.tsx"
+        ]
+      },
+      {
+        "id": "REQ-9",
+        "summary": "Build a 'My Orders' view inside the Customer Portal. When the user is authenticated, fetch and display their full order history using getOrdersByCustomer keyed by their principal. Each order entry must show: orderId, order date/time, list of items with quantities, total price, and current status badge. Orders should be sorted newest first.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/MyOrdersView.tsx",
+          "frontend/src/pages/CustomerPortal.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/MyOrdersView.tsx",
+          "frontend/src/pages/CustomerPortal.tsx"
+        ]
+      }
+    ]
+  },
+  "changedFiles": [
+    "backend/authorization/MixinAuthorization.mo",
+    "backend/authorization/access-control.mo",
+    "backend/main.mo",
+    "backend/migration.mo",
+    "build-request.json",
+    "build-template/README.md",
+    "caffeine.lock.json",
+    "feature_evidence.json",
+    "frontend-file-summaries.txt",
+    "frontend-implementation-plan.json",
+    "frontend/src/App.tsx",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/components/AccountView.tsx",
+    "frontend/src/components/CheckoutForm.tsx",
+    "frontend/src/components/CustomerNavigation.tsx",
+    "frontend/src/components/CustomerPortalLayout.tsx",
+    "frontend/src/components/Layout.tsx",
+    "frontend/src/components/LoginButton.tsx",
+    "frontend/src/components/MyOrdersView.tsx",
+    "frontend/src/components/Navigation.tsx",
+    "frontend/src/components/OrderCard.tsx",
+    "frontend/src/components/ProfileSetupModal.tsx",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
+    "frontend/src/hooks/useActor.ts",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/CourierApp.tsx",
+    "frontend/src/pages/CustomerPortal.tsx",
+    "frontend/src/utils/urlParams.ts",
+    "project_state.json",
+    "scratch/component-selection.json",
+    "spec.md",
+    "spec_vs_diff_report.json"
+  ]
+}

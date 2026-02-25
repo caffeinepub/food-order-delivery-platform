@@ -1,0 +1,90 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-integrate-internet-identity-authentication-into-the-customer-portal-add-login-logout-controls-to-the-navigation-bar-protected-routes-my-orders-account-should-redirect-unauthenticated-users-to-a-login-prompt-support-passkeys-google-apple-and-microsoft-sign-in-methods-via-internet-identity",
+      "featureTitle": "Integrate Internet Identity authentication into the Customer Portal. Add login/logout controls to the navigation bar. Protected routes (My Orders, Account) should redirect unauthenticated users to a login prompt. Support passkeys, Google, Apple, and Microsoft sign-in methods via Internet Identity.",
+      "files": [
+        "frontend/src/components/CustomerNavigation.tsx",
+        "frontend/src/components/LoginButton.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-6"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-a-navigation-bar-to-the-customer-portal-with-three-tabs-browse-menu-my-orders-and-account-the-existing-top-level-shared-navigation-linking-to-the-courier-dashboard-must-be-removed-from-the-customer-portal-the-courier-app-must-have-no-link-back-to-the-customer-portal",
+      "featureTitle": "Add a navigation bar to the Customer Portal with three tabs: 'Browse Menu', 'My Orders', and 'Account'. The existing top-level shared navigation linking to the Courier Dashboard must be removed from the Customer Portal. The Courier App must have no link back to the Customer Portal.",
+      "files": [
+        "frontend/src/components/Navigation.tsx",
+        "frontend/src/pages/CourierApp.tsx",
+        "frontend/src/pages/CustomerPortal.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-8"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-build-a-my-orders-view-inside-the-customer-portal-when-the-user-is-authenticated-fetch-and-display-their-full-order-history-using-getordersbycustomer-keyed-by-their-principal-each-order-entry-must-show-orderid-order-date-time-list-of-items-with-quantities-total-price-and-current-status-badge-orders-should-be-sorted-newest-first",
+      "featureTitle": "Build a 'My Orders' view inside the Customer Portal. When the user is authenticated, fetch and display their full order history using getOrdersByCustomer keyed by their principal. Each order entry must show: orderId, order date/time, list of items with quantities, total price, and current status badge. Orders should be sorted newest first.",
+      "files": [
+        "frontend/src/components/MyOrdersView.tsx",
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/CustomerPortal.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-9"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-build-an-account-view-inside-the-customer-portal-display-and-allow-editing-of-the-logged-in-user-s-saved-name-and-phone-number-using-getprofile-and-saveprofile-also-show-a-summary-of-the-user-s-recent-orders-the-checkout-form-must-pre-fill-name-and-phone-from-the-saved-profile-when-the-user-is-authenticated",
+      "featureTitle": "Build an 'Account' view inside the Customer Portal. Display and allow editing of the logged-in user's saved name and phone number using getProfile and saveProfile. Also show a summary of the user's recent orders. The checkout form must pre-fill name and phone from the saved profile when the user is authenticated.",
+      "files": [
+        "frontend/src/components/AccountView.tsx",
+        "frontend/src/components/CheckoutForm.tsx",
+        "frontend/src/components/ProfileSetupModal.tsx",
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/CustomerPortal.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-10"
+      ],
+      "confidence": "high"
+    }
+  ]
+}
