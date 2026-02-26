@@ -1,7 +1,7 @@
 import { createRouter, createRoute, createRootRoute, RouterProvider, Outlet } from '@tanstack/react-router';
-import { CustomerPortalLayout } from './components/CustomerPortalLayout';
-import { CustomerPortal } from './pages/CustomerPortal';
-import { CourierApp } from './pages/CourierApp';
+import CustomerPortalLayout from './components/CustomerPortalLayout';
+import CustomerPortal from './pages/CustomerPortal';
+import CourierApp from './pages/CourierApp';
 
 // Root route — renders children directly
 const rootRoute = createRootRoute({

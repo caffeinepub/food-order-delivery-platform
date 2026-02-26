@@ -52,6 +52,7 @@ export type OrderStatus = { 'preparing' : null } |
   { 'out_for_delivery' : null } |
   { 'delivered' : null } |
   { 'accepted' : null };
+export interface ProfileInput { 'name' : string, 'phone' : string }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
@@ -59,7 +60,6 @@ export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'addMenuItem' : ActorMethod<[MenuItemInput], MenuItem>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
-  'cancelOrder' : ActorMethod<[string], undefined>,
   'deleteMenuItem' : ActorMethod<[string], undefined>,
   'getAllOrders' : ActorMethod<[], Array<CustomerOrder>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [CustomerProfile]>,
@@ -68,15 +68,12 @@ export interface _SERVICE {
   'getMenuByCategory' : ActorMethod<[string], Array<MenuItem>>,
   'getOrderById' : ActorMethod<[string], CustomerOrder>,
   'getOrdersByCustomer' : ActorMethod<[Principal], Array<CustomerOrder>>,
-  'getProfile' : ActorMethod<[Principal], [] | [CustomerProfile]>,
   'getUserProfile' : ActorMethod<[Principal], [] | [CustomerProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'placeOrder' : ActorMethod<[OrderInput], undefined>,
-  'saveCallerUserProfile' : ActorMethod<[CustomerProfile], undefined>,
-  'saveProfile' : ActorMethod<[string, string], undefined>,
+  'saveCallerUserProfile' : ActorMethod<[ProfileInput], undefined>,
   'toggleMenuItemAvailability' : ActorMethod<[string], MenuItem>,
   'updateMenuItem' : ActorMethod<[MenuItemUpdate], MenuItem>,
-  'updateOrderStatus' : ActorMethod<[string, OrderStatus], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

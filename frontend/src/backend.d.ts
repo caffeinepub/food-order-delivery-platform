@@ -43,6 +43,10 @@ export interface CustomerProfile {
     name: string;
     phone: string;
 }
+export interface ProfileInput {
+    name: string;
+    phone: string;
+}
 export interface MenuItemInput {
     name: string;
     description: string;
@@ -65,7 +69,6 @@ export enum UserRole {
 export interface backendInterface {
     addMenuItem(input: MenuItemInput): Promise<MenuItem>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    cancelOrder(orderId: string): Promise<void>;
     deleteMenuItem(itemId: string): Promise<void>;
     getAllOrders(): Promise<Array<CustomerOrder>>;
     getCallerUserProfile(): Promise<CustomerProfile | null>;
@@ -74,13 +77,10 @@ export interface backendInterface {
     getMenuByCategory(category: string): Promise<Array<MenuItem>>;
     getOrderById(orderId: string): Promise<CustomerOrder>;
     getOrdersByCustomer(customerId: Principal): Promise<Array<CustomerOrder>>;
-    getProfile(customerId: Principal): Promise<CustomerProfile | null>;
     getUserProfile(user: Principal): Promise<CustomerProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     placeOrder(order: OrderInput): Promise<void>;
-    saveCallerUserProfile(profile: CustomerProfile): Promise<void>;
-    saveProfile(name: string, phone: string): Promise<void>;
+    saveCallerUserProfile(profile: ProfileInput): Promise<void>;
     toggleMenuItemAvailability(itemId: string): Promise<MenuItem>;
     updateMenuItem(update: MenuItemUpdate): Promise<MenuItem>;
-    updateOrderStatus(orderId: string, status: OrderStatus): Promise<void>;
 }

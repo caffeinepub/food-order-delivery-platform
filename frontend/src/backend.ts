@@ -125,6 +125,10 @@ export interface CustomerProfile {
     name: string;
     phone: string;
 }
+export interface ProfileInput {
+    name: string;
+    phone: string;
+}
 export interface MenuItemInput {
     name: string;
     description: string;
@@ -148,7 +152,6 @@ export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     addMenuItem(input: MenuItemInput): Promise<MenuItem>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    cancelOrder(orderId: string): Promise<void>;
     deleteMenuItem(itemId: string): Promise<void>;
     getAllOrders(): Promise<Array<CustomerOrder>>;
     getCallerUserProfile(): Promise<CustomerProfile | null>;
@@ -157,15 +160,12 @@ export interface backendInterface {
     getMenuByCategory(category: string): Promise<Array<MenuItem>>;
     getOrderById(orderId: string): Promise<CustomerOrder>;
     getOrdersByCustomer(customerId: Principal): Promise<Array<CustomerOrder>>;
-    getProfile(customerId: Principal): Promise<CustomerProfile | null>;
     getUserProfile(user: Principal): Promise<CustomerProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     placeOrder(order: OrderInput): Promise<void>;
-    saveCallerUserProfile(profile: CustomerProfile): Promise<void>;
-    saveProfile(name: string, phone: string): Promise<void>;
+    saveCallerUserProfile(profile: ProfileInput): Promise<void>;
     toggleMenuItemAvailability(itemId: string): Promise<MenuItem>;
     updateMenuItem(update: MenuItemUpdate): Promise<MenuItem>;
-    updateOrderStatus(orderId: string, status: OrderStatus): Promise<void>;
 }
 import type { CustomerOrder as _CustomerOrder, CustomerProfile as _CustomerProfile, MenuItemUpdate as _MenuItemUpdate, OrderItem as _OrderItem, OrderStatus as _OrderStatus, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -209,20 +209,6 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n1(this._uploadFile, this._downloadFile, arg1));
-            return result;
-        }
-    }
-    async cancelOrder(arg0: string): Promise<void> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.cancelOrder(arg0);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.cancelOrder(arg0);
             return result;
         }
     }
@@ -338,20 +324,6 @@ export class Backend implements backendInterface {
             return from_candid_vec_n3(this._uploadFile, this._downloadFile, result);
         }
     }
-    async getProfile(arg0: Principal): Promise<CustomerProfile | null> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getProfile(arg0);
-                return from_candid_opt_n8(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getProfile(arg0);
-            return from_candid_opt_n8(this._uploadFile, this._downloadFile, result);
-        }
-    }
     async getUserProfile(arg0: Principal): Promise<CustomerProfile | null> {
         if (this.processError) {
             try {
@@ -394,7 +366,7 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async saveCallerUserProfile(arg0: CustomerProfile): Promise<void> {
+    async saveCallerUserProfile(arg0: ProfileInput): Promise<void> {
         if (this.processError) {
             try {
                 const result = await this.actor.saveCallerUserProfile(arg0);
@@ -405,20 +377,6 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.saveCallerUserProfile(arg0);
-            return result;
-        }
-    }
-    async saveProfile(arg0: string, arg1: string): Promise<void> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.saveProfile(arg0, arg1);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.saveProfile(arg0, arg1);
             return result;
         }
     }
@@ -447,20 +405,6 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.updateMenuItem(to_candid_MenuItemUpdate_n11(this._uploadFile, this._downloadFile, arg0));
-            return result;
-        }
-    }
-    async updateOrderStatus(arg0: string, arg1: OrderStatus): Promise<void> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.updateOrderStatus(arg0, to_candid_OrderStatus_n13(this._uploadFile, this._downloadFile, arg1));
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.updateOrderStatus(arg0, to_candid_OrderStatus_n13(this._uploadFile, this._downloadFile, arg1));
             return result;
         }
     }
@@ -531,9 +475,6 @@ function from_candid_vec_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Ar
 function to_candid_MenuItemUpdate_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: MenuItemUpdate): _MenuItemUpdate {
     return to_candid_record_n12(_uploadFile, _downloadFile, value);
 }
-function to_candid_OrderStatus_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: OrderStatus): _OrderStatus {
-    return to_candid_variant_n14(_uploadFile, _downloadFile, value);
-}
 function to_candid_UserRole_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
     return to_candid_variant_n2(_uploadFile, _downloadFile, value);
 }
@@ -557,33 +498,6 @@ function to_candid_record_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8
         category: value.category ? candid_some(value.category) : candid_none(),
         price: value.price ? candid_some(value.price) : candid_none()
     };
-}
-function to_candid_variant_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: OrderStatus): {
-    preparing: null;
-} | {
-    cancelled: null;
-} | {
-    pending: null;
-} | {
-    out_for_delivery: null;
-} | {
-    delivered: null;
-} | {
-    accepted: null;
-} {
-    return value == OrderStatus.preparing ? {
-        preparing: null
-    } : value == OrderStatus.cancelled ? {
-        cancelled: null
-    } : value == OrderStatus.pending ? {
-        pending: null
-    } : value == OrderStatus.out_for_delivery ? {
-        out_for_delivery: null
-    } : value == OrderStatus.delivered ? {
-        delivered: null
-    } : value == OrderStatus.accepted ? {
-        accepted: null
-    } : value;
 }
 function to_candid_variant_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): {
     admin: null;

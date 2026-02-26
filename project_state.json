@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 13,
+  "projectStateVersion": 23,
   "summary": "Two separate standalone web apps sharing a single backend: (1) a Customer Portal (The Deccan BHOJAN) with Internet Identity login, nav bar (Browse Menu, My Orders, Account), menu browsing, cart, checkout pre-filled from profile, order history, and account management; and (2) a Courier App with a PIN-based access gate (PIN: 1953), a full order dashboard, status controls (pending → accepted → preparing → out_for_delivery → delivered), and a Menu Management section (add, edit, toggle availability, delete items). Both apps share one Motoko backend actor handling orders, menu, and customer profiles. No cross-app navigation.",
   "architectural_notes": [
     "Order status flow: placed → preparing → out for delivery → delivered",
@@ -8,7 +8,15 @@
     "Customer Portal uses Internet Identity for authentication; orders are tied to logged-in user principal",
     "Courier App access is gated by PIN '1953'; no Internet Identity required for courier access"
   ],
-  "known_issues": [],
+  "known_issues": [
+    "Add Item form submission in Courier App Menu Management silently fails — mutation does not fire or complete, no error shown to user",
+    "Courier App Menu Management shows 'admin access needed' error blocking menu edits for PIN-authenticated users",
+    "Orders placed in Customer Portal do not appear on Courier App dashboard",
+    "Toggling menu item availability in Menu Management permanently deletes the item instead of flipping the availability flag",
+    "Orders disappear on Customer Portal refresh — frontend relies on transient React state instead of re-fetching from backend",
+    "Courier App order status resets to 'Accept Order' on refresh — status not sourced from backend stable map on load",
+    "Order status updates by courier do not reflect on Customer Portal — no polling or query invalidation in place"
+  ],
   "isFixRequest": true,
   "existing_features": [
     {
@@ -114,6 +122,102 @@
         "REQ-18"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-fix-the-add-item-form-submission-in-the-menu-management-section-of-the-courier-app-frontend-src-components-menumanagementsection-tsx-the-form-s-submit-handler-must-correctly-call-the-useaddmenuitem-mutation-hook-ensure-the-actor-is-initialized-and-non-null-before-the-mutation-is-invoked-the-mutation-must-be-awaited-and-the-form-modal-must-close-on-success-if-the-mutation-fails-display-a-visible-error-message-to-the-user-the-form-must-not-silently-fail-under-any-circumstances",
+      "title": "Fix the 'Add Item' form submission in the Menu Management section of the Courier App (frontend/src/components/MenuManagementSection.tsx). The form's submit handler must correctly call the useAddMenuItem mutation hook. Ensure the actor is initialized and non-null before the mutation is invoked. The mutation must be awaited and the form/modal must close on success. If the mutation fails, display a visible error message to the user. The form must not silently fail under any circumstances.",
+      "reqIds": [
+        "REQ-19"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-apply-a-consistent-white-and-orange-f97316-color-scheme-across-the-entire-customer-portal-replace-all-transparent-missing-or-cream-charcoal-backgrounds-with-solid-white-ffffff-for-page-and-card-backgrounds-use-f97316-vibrant-orange-as-the-primary-accent-color-for-the-navigation-bar-background-or-border-active-tab-indicators-buttons-primary-cta-add-to-cart-checkout-status-badges-icons-links-and-any-highlighted-ui-elements-ensure-no-surface-appears-transparent-or-uncolored-every-section-must-have-a-clearly-defined-background-fill",
+      "title": "Apply a consistent white and orange (#F97316) color scheme across the entire Customer Portal. Replace all transparent, missing, or cream/charcoal backgrounds with solid white (#FFFFFF) for page and card backgrounds. Use #F97316 (vibrant orange) as the primary accent color for: the navigation bar background or border, active tab indicators, buttons (primary CTA, add-to-cart, checkout), status badges, icons, links, and any highlighted UI elements. Ensure no surface appears transparent or uncolored — every section must have a clearly defined background fill.",
+      "reqIds": [
+        "REQ-20"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-apply-the-same-consistent-white-and-orange-f97316-color-scheme-across-the-entire-courier-app-replace-all-transparent-missing-or-cream-charcoal-backgrounds-with-solid-white-ffffff-for-page-and-card-backgrounds-use-f97316-as-the-primary-accent-for-the-pin-entry-screen-background-header-pin-input-border-focus-rings-the-submit-button-the-courier-dashboard-nav-tab-bar-order-cards-action-buttons-accept-update-status-status-badges-the-menu-management-section-headers-add-item-button-edit-delete-controls-and-the-lock-button-the-pin-entry-screen-must-have-a-clearly-filled-background-white-with-orange-accents-not-transparent",
+      "title": "Apply the same consistent white and orange (#F97316) color scheme across the entire Courier App. Replace all transparent, missing, or cream/charcoal backgrounds with solid white (#FFFFFF) for page and card backgrounds. Use #F97316 as the primary accent for: the PIN entry screen background header, PIN input border/focus rings, the submit button, the courier dashboard nav/tab bar, order cards, action buttons (Accept, Update Status), status badges, the Menu Management section headers, Add Item button, Edit/Delete controls, and the Lock button. The PIN entry screen must have a clearly filled background (white with orange accents) — not transparent.",
+      "reqIds": [
+        "REQ-21"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-global-css-custom-properties-and-tailwind-theme-tokens-in-frontend-src-index-css-and-frontend-tailwind-config-js-to-reflect-the-white-and-orange-palette-as-the-canonical-theme-set-the-default-background-token-to-white-and-the-primary-color-token-to-f97316-remove-or-override-any-oklch-based-tokens-that-resolve-to-transparent-or-near-transparent-values-for-backgrounds-ensure-the-base-body-background-is-solid-white",
+      "title": "Update the global CSS custom properties and Tailwind theme tokens in frontend/src/index.css and frontend/tailwind.config.js to reflect the white and orange palette as the canonical theme. Set the default background token to white and the primary color token to #F97316. Remove or override any OKLCH-based tokens that resolve to transparent or near-transparent values for backgrounds. Ensure the base body background is solid white.",
+      "reqIds": [
+        "REQ-22"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-remove-all-remaining-role-based-access-control-and-admin-permission-checks-from-the-courier-app-s-menu-management-section-specifically-in-frontend-src-components-menumanagementsection-tsx-and-frontend-src-pages-courierapp-tsx-remove-any-guard-that-checks-for-an-admin-role-an-authenticated-internet-identity-principal-or-any-permission-level-before-allowing-the-user-to-add-edit-toggle-availability-or-delete-menu-items-a-user-who-has-passed-the-pin-gate-pin-1953-must-have-full-unrestricted-access-to-all-menu-management-operations-without-any-additional-access-checks",
+      "title": "Remove all remaining role-based access control and admin permission checks from the Courier App's Menu Management section. Specifically, in frontend/src/components/MenuManagementSection.tsx and frontend/src/pages/CourierApp.tsx, remove any guard that checks for an admin role, an authenticated Internet Identity principal, or any permission level before allowing the user to add, edit, toggle availability, or delete menu items. A user who has passed the PIN gate (PIN: 1953) must have full, unrestricted access to all menu management operations without any additional access checks.",
+      "reqIds": [
+        "REQ-23"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-useallorders-hook-in-frontend-src-hooks-usequeries-ts-and-the-courier-app-dashboard-in-frontend-src-pages-courierapp-tsx-to-ensure-all-orders-are-fetched-correctly-the-query-must-call-actor-getallorders-not-a-per-customer-variant-must-not-filter-results-by-any-identity-or-principal-and-must-re-fetch-after-any-order-related-mutation-e-g-status-update-accept-ensure-the-actor-is-non-null-before-the-query-fires",
+      "title": "Fix the `useAllOrders` hook in `frontend/src/hooks/useQueries.ts` and the Courier App dashboard in `frontend/src/pages/CourierApp.tsx` to ensure all orders are fetched correctly. The query must call `actor.getAllOrders()` (not a per-customer variant), must not filter results by any identity or principal, and must re-fetch after any order-related mutation (e.g., status update, accept). Ensure the actor is non-null before the query fires.",
+      "reqIds": [
+        "REQ-26"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-usetogglemenuitemavailability-mutation-hook-in-frontend-src-hooks-usequeries-ts-so-it-calls-actor-togglemenuitemavailability-itemid-and-not-actor-deletemenuitem-or-any-delete-adjacent-function-after-a-successful-toggle-the-mutation-must-invalidate-the-menu-query-so-the-ui-reflects-the-updated-availability-state-immediately-in-frontend-src-components-menumanagementsection-tsx-the-availability-toggle-control-must-invoke-only-the-toggle-mutation-never-the-delete-mutation",
+      "title": "Fix the `useToggleMenuItemAvailability` mutation hook in `frontend/src/hooks/useQueries.ts` so it calls `actor.toggleMenuItemAvailability(itemId)` and not `actor.deleteMenuItem` or any delete-adjacent function. After a successful toggle, the mutation must invalidate the menu query so the UI reflects the updated availability state immediately. In `frontend/src/components/MenuManagementSection.tsx`, the availability toggle control must invoke only the toggle mutation, never the delete mutation.",
+      "reqIds": [
+        "REQ-28"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-useallorders-hook-in-frontend-src-hooks-usequeries-ts-to-call-actor-getallorders-not-any-per-customer-or-identity-filtered-variant-ensure-the-actor-is-non-null-before-the-query-fires-and-ensure-the-query-re-fetches-after-any-order-related-mutation-status-update-accept-place-order-in-frontend-src-pages-courierapp-tsx-ensure-the-dashboard-renders-the-full-returned-order-list-and-handles-loading-error-and-empty-states-gracefully",
+      "title": "Fix the useAllOrders hook in frontend/src/hooks/useQueries.ts to call actor.getAllOrders() (not any per-customer or identity-filtered variant), ensure the actor is non-null before the query fires, and ensure the query re-fetches after any order-related mutation (status update, accept, place order). In frontend/src/pages/CourierApp.tsx, ensure the dashboard renders the full returned order list and handles loading, error, and empty states gracefully.",
+      "reqIds": [
+        "REQ-32"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-customer-portal-frontend-src-pages-customerportal-tsx-and-frontend-src-hooks-usequeries-ts-so-that-the-active-recent-order-state-is-never-held-exclusively-in-transient-react-component-state-on-mount-and-on-navigation-to-the-menu-or-order-confirmation-view-the-portal-must-re-fetch-the-user-s-latest-orders-from-the-backend-via-getordersbycustomer-the-useordersbycustomer-hook-must-be-enabled-whenever-the-actor-and-identity-are-available-and-its-result-must-be-the-authoritative-source-of-order-data-not-sessionstorage-or-in-memory-state-alone",
+      "title": "Fix the Customer Portal (`frontend/src/pages/CustomerPortal.tsx` and `frontend/src/hooks/useQueries.ts`) so that the active/recent order state is never held exclusively in transient React component state. On mount and on navigation to the Menu or Order Confirmation view, the portal must re-fetch the user's latest orders from the backend via `getOrdersByCustomer`. The `useOrdersByCustomer` hook must be enabled whenever the actor and identity are available, and its result must be the authoritative source of order data — not sessionStorage or in-memory state alone.",
+      "reqIds": [
+        "REQ-34"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-orderconfirmation-component-frontend-src-components-orderconfirmation-tsx-to-poll-getorderbyid-or-equivalent-for-the-specific-order-s-latest-status-every-8-seconds-the-status-displayed-in-the-progress-stepper-must-always-reflect-the-value-returned-from-the-backend-not-local-component-state-set-at-order-placement-time-on-remount-e-g-after-a-page-refresh-the-component-must-accept-the-orderid-prop-and-immediately-fetch-the-current-status-from-the-backend-before-rendering",
+      "title": "Fix the `OrderConfirmation` component (`frontend/src/components/OrderConfirmation.tsx`) to poll `getOrderById` (or equivalent) for the specific order's latest status every 8 seconds. The status displayed in the progress stepper must always reflect the value returned from the backend, not local component state set at order placement time. On remount (e.g., after a page refresh), the component must accept the `orderId` prop and immediately fetch the current status from the backend before rendering.",
+      "reqIds": [
+        "REQ-35"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-myordersview-component-frontend-src-components-myordersview-tsx-and-its-underlying-useordersbycustomer-hook-in-frontend-src-hooks-usequeries-ts-to-poll-for-updated-order-statuses-the-query-must-refetch-at-least-every-15-seconds-when-the-view-is-active-and-must-also-refetch-immediately-after-any-order-related-mutation-place-order-cancel-order-status-badges-displayed-in-the-order-history-list-must-reflect-the-latest-value-from-the-backend",
+      "title": "Fix the `MyOrdersView` component (`frontend/src/components/MyOrdersView.tsx`) and its underlying `useOrdersByCustomer` hook in `frontend/src/hooks/useQueries.ts` to poll for updated order statuses. The query must refetch at least every 15 seconds when the view is active, and must also refetch immediately after any order-related mutation (place order, cancel order). Status badges displayed in the order history list must reflect the latest value from the backend.",
+      "reqIds": [
+        "REQ-36"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-courier-app-dashboard-frontend-src-pages-courierapp-tsx-and-frontend-src-hooks-usequeries-ts-so-that-on-every-mount-including-after-a-hard-page-refresh-it-re-fetches-all-orders-from-the-backend-via-actor-getallorders-order-status-displayed-on-each-ordercard-must-come-directly-from-the-fetched-backend-data-not-from-local-component-state-the-useallorders-query-must-also-automatically-refetch-every-15-seconds-to-stay-current-and-must-invalidate-and-refetch-after-any-acceptorder-or-updateorderstatus-mutation-completes",
+      "title": "Fix the Courier App dashboard (`frontend/src/pages/CourierApp.tsx` and `frontend/src/hooks/useQueries.ts`) so that on every mount (including after a hard page refresh) it re-fetches all orders from the backend via `actor.getAllOrders()`. Order status displayed on each `OrderCard` must come directly from the fetched backend data, not from local component state. The `useAllOrders` query must also automatically refetch every 15 seconds to stay current, and must invalidate and refetch after any `acceptOrder` or `updateOrderStatus` mutation completes.",
+      "reqIds": [
+        "REQ-37"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -209,6 +313,92 @@
       "id": "AR-19",
       "summary": "Add a PIN-based access gate to the Courier App. Visiting /courier shows a PIN entry screen; entering '1953' grants access to the full dashboard. Wrong PIN shows an error. Access persists in localStorage. A 'Lock' button lets the courier log out of the Courier App.",
       "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-20",
+      "summary": "Update color scheme to white and orange (#F97316) across both Customer Portal and Courier App — fix transparent/missing fill on all backgrounds, nav bars, buttons, cards, badges, headers, and form elements",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-21",
+      "summary": "Fix 'admin access needed' error blocking menu editing in Courier App Menu Management — remove any remaining role-based or admin access checks so PIN-authenticated users have full access to add, edit, toggle, and delete menu items",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-26",
+      "summary": "Remove all remaining role-based access control and admin permission checks from the Motoko backend actor (backend/main.mo) for the menu management functions: addMenuItem, updateMenuItem, toggleMenuItemAvailability, and deleteMenuItem. These functions must be callable by any authenticated or anonymous caller without checking for a specific admin principal or role. Do not require any caller identity validation in these four functions.",
+      "reqIds": [
+        "REQ-24"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-27",
+      "summary": "Fix: Orders placed in Customer Portal do not appear on the Courier App dashboard — trace order placement and fetching to ensure all orders are visible to courier regardless of caller principal",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-28",
+      "summary": "Fix: Toggling item availability in Menu Management permanently deletes the item instead of flipping the availability flag — fix toggleMenuItemAvailability mutation to only update availability",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-29",
+      "summary": "Fix the backend `placeOrder` function in `backend/main.mo` to ensure every placed order is stored in the shared stable orders map and is retrievable by `getAllOrders` regardless of which caller principal placed the order. Verify that `getAllOrders` returns the complete list of all orders across all customers without filtering by caller identity. If `placeOrder` currently stores orders in a per-caller or per-customer scoped structure that is not traversed by `getAllOrders`, refactor both functions so all orders share a single canonical stable map keyed by `orderId`.",
+      "reqIds": [
+        "REQ-25"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-31",
+      "summary": "Fix the `toggleMenuItemAvailability` function in `backend/main.mo` so it only flips the `availability` boolean of the target menu item and does not delete or remove the item. The function must locate the item by `itemId` in the stable menu map, toggle its `availability` field (true → false or false → true), update the map entry, and return the updated item. It must never call or invoke any deletion logic.",
+      "reqIds": [
+        "REQ-27"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-32",
+      "summary": "Remove all remaining role-based access control, admin role checks, and Internet Identity principal checks from the backend Motoko actor (backend/main.mo) for the menu management functions: addMenuItem, updateMenuItem, toggleMenuItemAvailability, and deleteMenuItem. These four functions must be callable by any caller (authenticated or anonymous) without validating caller identity or role. No 'admin access needed' error must ever be returned from these functions.",
+      "reqIds": [
+        "REQ-29"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-33",
+      "summary": "Audit and fix the frontend MenuManagementSection.tsx and CourierApp.tsx to ensure no client-side admin role check, Internet Identity principal guard, or permission gate blocks a PIN-authenticated user from invoking add, edit, toggle availability, or delete menu item operations. Any remaining guard that checks for an admin role or authenticated principal before enabling or calling these mutations must be removed.",
+      "reqIds": [
+        "REQ-30"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-34",
+      "summary": "Fix the backend placeOrder function in backend/main.mo to store every placed order in a single shared stable map keyed by orderId, regardless of which caller principal placed the order. Fix getAllOrders to return all entries from this single canonical map without filtering by caller identity or customer principal. If orders are currently stored in a per-caller or per-customer scoped structure not fully traversed by getAllOrders, refactor both functions to use one unified stable orders map.",
+      "reqIds": [
+        "REQ-31"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-35",
+      "summary": "Fix order persistence and sync issues: (1) orders disappearing on Customer Portal refresh — re-fetch from backend on mount instead of relying on transient React state; (2) Courier App order status resetting to 'Accept Order' on refresh — read status from backend stable map on every load; (3) Order status not reflecting on Customer side — add polling or query invalidation so My Orders view stays in sync with latest backend status",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-36",
+      "summary": "Audit and fix the backend `placeOrder` function in `backend/main.mo` to ensure every placed order is stored in a single canonical stable map keyed by `orderId`, independent of the caller's principal. Fix `getAllOrders` to return all entries from this single map without any per-caller or per-customer filtering. Fix `getOrdersByCustomer` to query from the same canonical map filtered only by the stored `customerId` field. If orders are currently stored in any per-caller or per-customer scoped structure that is not fully traversed by `getAllOrders`, refactor both functions to use the one unified stable orders map.",
+      "reqIds": [
+        "REQ-33"
+      ],
       "status": "pending"
     }
   ],

@@ -1,41 +1,94 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-25T16:44:07.533Z",
+  "generatedAt": "2026-02-26T09:47:41.706Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 1,
-    "implemented": 1,
+    "total": 5,
+    "implemented": 4,
     "items": [
       {
-        "id": "REQ-18",
-        "summary": "Add a PIN-based access gate to the Courier App at '/courier'. When a user visits the route, they must first see a PIN entry screen (styled with the app's warm orange/cream theme) instead of the dashboard. If the user enters the PIN '1953' and submits, access is granted and the full Courier App dashboard is shown. If the PIN is incorrect, display a clear error message. The granted access state must be persisted in localStorage so the user does not need to re-enter the PIN on page refresh. A 'Lock' or 'Sign Out' button must be visible in the Courier App UI to clear the access state and return the user to the PIN entry screen. Remove or bypass any existing Internet Identity / role-based access control checks that are currently blocking users in CourierApp.tsx.",
+        "id": "REQ-33",
+        "summary": "Audit and fix the backend `placeOrder` function in `backend/main.mo` to ensure every placed order is stored in a single canonical stable map keyed by `orderId`, independent of the caller's principal. Fix `getAllOrders` to return all entries from this single map without any per-caller or per-customer filtering. Fix `getOrdersByCustomer` to query from the same canonical map filtered only by the stored `customerId` field. If orders are currently stored in any per-caller or per-customer scoped structure that is not fully traversed by `getAllOrders`, refactor both functions to use the one unified stable orders map.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-34",
+        "summary": "Fix the Customer Portal (`frontend/src/pages/CustomerPortal.tsx` and `frontend/src/hooks/useQueries.ts`) so that the active/recent order state is never held exclusively in transient React component state. On mount and on navigation to the Menu or Order Confirmation view, the portal must re-fetch the user's latest orders from the backend via `getOrdersByCustomer`. The `useOrdersByCustomer` hook must be enabled whenever the actor and identity are available, and its result must be the authoritative source of order data — not sessionStorage or in-memory state alone.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/CourierPinGate.tsx",
-          "frontend/src/hooks/useCourierAccess.ts",
-          "frontend/src/pages/CourierApp.tsx"
+          "frontend/src/pages/CustomerPortal.tsx",
+          "frontend/src/hooks/useQueries.ts"
         ],
         "matchedFiles": [
-          "frontend/src/components/CourierPinGate.tsx",
-          "frontend/src/hooks/useCourierAccess.ts",
-          "frontend/src/pages/CourierApp.tsx"
+          "frontend/src/pages/CustomerPortal.tsx",
+          "frontend/src/hooks/useQueries.ts"
+        ]
+      },
+      {
+        "id": "REQ-35",
+        "summary": "Fix the `OrderConfirmation` component (`frontend/src/components/OrderConfirmation.tsx`) to poll `getOrderById` (or equivalent) for the specific order's latest status every 8 seconds. The status displayed in the progress stepper must always reflect the value returned from the backend, not local component state set at order placement time. On remount (e.g., after a page refresh), the component must accept the `orderId` prop and immediately fetch the current status from the backend before rendering.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/OrderConfirmation.tsx",
+          "frontend/src/hooks/useQueries.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/OrderConfirmation.tsx",
+          "frontend/src/hooks/useQueries.ts"
+        ]
+      },
+      {
+        "id": "REQ-36",
+        "summary": "Fix the `MyOrdersView` component (`frontend/src/components/MyOrdersView.tsx`) and its underlying `useOrdersByCustomer` hook in `frontend/src/hooks/useQueries.ts` to poll for updated order statuses. The query must refetch at least every 15 seconds when the view is active, and must also refetch immediately after any order-related mutation (place order, cancel order). Status badges displayed in the order history list must reflect the latest value from the backend.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/MyOrdersView.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/MyOrdersView.tsx"
+        ]
+      },
+      {
+        "id": "REQ-37",
+        "summary": "Fix the Courier App dashboard (`frontend/src/pages/CourierApp.tsx` and `frontend/src/hooks/useQueries.ts`) so that on every mount (including after a hard page refresh) it re-fetches all orders from the backend via `actor.getAllOrders()`. Order status displayed on each `OrderCard` must come directly from the fetched backend data, not from local component state. The `useAllOrders` query must also automatically refetch every 15 seconds to stay current, and must invalidate and refetch after any `acceptOrder` or `updateOrderStatus` mutation completes.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/CourierApp.tsx",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/OrderCard.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/CourierApp.tsx",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/OrderCard.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
+    "backend/main.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/components/CourierPinGate.tsx",
-    "frontend/src/hooks/useCourierAccess.ts",
-    "frontend/src/index.css",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/components/MyOrdersView.tsx",
+    "frontend/src/components/OrderCard.tsx",
+    "frontend/src/components/OrderConfirmation.tsx",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
+    "frontend/src/hooks/useQueries.ts",
     "frontend/src/pages/CourierApp.tsx",
+    "frontend/src/pages/CustomerPortal.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

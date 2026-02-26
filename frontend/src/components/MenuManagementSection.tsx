@@ -1,32 +1,21 @@
-import { useState } from 'react';
-import { Plus, Pencil, Trash2, AlertCircle, UtensilsCrossed, Loader2, Check, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+import React, { useState } from 'react';
+import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Loader2, ChefHat } from 'lucide-react';
+import { type MenuItem } from '../backend';
+import {
+  useAdminMenu,
+  useAddMenuItem,
+  useUpdateMenuItem,
+  useToggleMenuItemAvailability,
+  useDeleteMenuItem,
+} from '../hooks/useQueries';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { useMenu, useAddMenuItem, useUpdateMenuItem, useToggleMenuItemAvailability, useDeleteMenuItem } from '../hooks/useQueries';
-import { type MenuItem, type MenuItemInput } from '../backend';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface MenuItemFormData {
   name: string;
@@ -42,379 +31,365 @@ const emptyForm: MenuItemFormData = {
   category: '',
 };
 
-function itemToFormData(item: MenuItem): MenuItemFormData {
-  return {
-    name: item.name,
-    description: item.description,
-    price: item.price.toString(),
-    category: item.category,
-  };
-}
-
-interface MenuItemFormProps {
-  title: string;
-  description: string;
-  initialData?: MenuItemFormData;
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (data: MenuItemFormData) => void;
-  isSubmitting: boolean;
-  submitLabel: string;
-}
-
-function MenuItemFormDialog({
-  title,
-  description,
-  initialData = emptyForm,
-  isOpen,
-  onClose,
-  onSubmit,
-  isSubmitting,
-  submitLabel,
-}: MenuItemFormProps) {
-  const [form, setForm] = useState<MenuItemFormData>(initialData);
-
-  // Reset form when dialog opens with new initialData
-  const handleOpenChange = (open: boolean) => {
-    if (open) {
-      setForm(initialData);
-    } else {
-      onClose();
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(form);
-  };
-
-  const isValid =
-    form.name.trim() !== '' &&
-    form.category.trim() !== '' &&
-    !isNaN(parseFloat(form.price)) &&
-    parseFloat(form.price) > 0;
-
-  return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="font-display font-800">{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="item-name">Item Name *</Label>
-            <Input
-              id="item-name"
-              placeholder="e.g. Chicken Biryani"
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              disabled={isSubmitting}
-              required
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="item-description">Description</Label>
-            <Textarea
-              id="item-description"
-              placeholder="Describe the dish..."
-              value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              disabled={isSubmitting}
-              rows={3}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="item-price">Price (₹) *</Label>
-              <Input
-                id="item-price"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                value={form.price}
-                onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-                disabled={isSubmitting}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="item-category">Category *</Label>
-              <Input
-                id="item-category"
-                placeholder="e.g. Mains"
-                value={form.category}
-                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                disabled={isSubmitting}
-                required
-              />
-            </div>
-          </div>
-          <DialogFooter className="pt-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting || !isValid} className="gap-2">
-              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {submitLabel}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-export function MenuManagementSection() {
-  const { data: menuItems, isLoading, isError, refetch } = useMenu();
-  const addMenuItem = useAddMenuItem();
-  const updateMenuItem = useUpdateMenuItem();
-  const toggleAvailability = useToggleMenuItemAvailability();
-  const deleteMenuItem = useDeleteMenuItem();
+export default function MenuManagementSection() {
+  // Use the admin-specific hook that maintains all items (including unavailable)
+  // in a separate cache managed by mutations via setQueryData.
+  const { data: menuItems, isLoading } = useAdminMenu();
+  const addMutation = useAddMenuItem();
+  const updateMutation = useUpdateMenuItem();
+  const toggleMutation = useToggleMenuItemAvailability();
+  const deleteMutation = useDeleteMenuItem();
 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [formData, setFormData] = useState<MenuItemFormData>(emptyForm);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
+  // Track which item is currently being toggled for per-item loading state
+  const [togglingItemId, setTogglingItemId] = useState<string | null>(null);
+  // Track which item is currently being deleted for per-item loading state
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
-  // Group items by category
-  const grouped = (menuItems ?? []).reduce<Record<string, MenuItem[]>>((acc, item) => {
-    const cat = item.category || 'Uncategorized';
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(item);
+  const handleOpenAdd = () => {
+    setFormData(emptyForm);
+    setAddError(null);
+    addMutation.reset();
+    setShowAddDialog(true);
+  };
+
+  const handleOpenEdit = (item: MenuItem) => {
+    setFormData({
+      name: item.name,
+      description: item.description,
+      price: item.price.toString(),
+      category: item.category,
+    });
+    setEditError(null);
+    updateMutation.reset();
+    setEditingItem(item);
+  };
+
+  const handleCloseAdd = () => {
+    setShowAddDialog(false);
+    setAddError(null);
+    addMutation.reset();
+  };
+
+  const handleCloseEdit = () => {
+    setEditingItem(null);
+    setEditError(null);
+    updateMutation.reset();
+  };
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddError(null);
+    try {
+      await addMutation.mutateAsync({
+        name: formData.name,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        category: formData.category,
+      });
+      handleCloseAdd();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to add item. Please try again.';
+      setAddError(msg);
+    }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+    setEditError(null);
+    try {
+      await updateMutation.mutateAsync({
+        itemId: editingItem.itemId,
+        name: formData.name,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        category: formData.category,
+      });
+      handleCloseEdit();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update item. Please try again.';
+      setEditError(msg);
+    }
+  };
+
+  const handleToggle = async (itemId: string) => {
+    setTogglingItemId(itemId);
+    try {
+      await toggleMutation.mutateAsync(itemId);
+    } finally {
+      setTogglingItemId(null);
+    }
+  };
+
+  const handleDelete = async (itemId: string) => {
+    if (!confirm('Are you sure you want to delete this item?')) return;
+    setDeletingItemId(itemId);
+    try {
+      await deleteMutation.mutateAsync(itemId);
+    } finally {
+      setDeletingItemId(null);
+    }
+  };
+
+  // Group all items by category — includes unavailable items so toggling doesn't remove them
+  const allItems: MenuItem[] = menuItems ?? [];
+  const grouped = allItems.reduce<Record<string, MenuItem[]>>((acc, item) => {
+    if (!acc[item.category]) acc[item.category] = [];
+    acc[item.category].push(item);
     return acc;
   }, {});
 
-  const handleAdd = (data: MenuItemFormData) => {
-    const input: MenuItemInput = {
-      name: data.name.trim(),
-      description: data.description.trim(),
-      price: parseFloat(data.price),
-      category: data.category.trim(),
-    };
-    addMenuItem.mutate(input, {
-      onSuccess: () => {
-        setShowAddDialog(false);
-      },
-    });
-  };
-
-  const handleEdit = (data: MenuItemFormData) => {
-    if (!editingItem) return;
-    updateMenuItem.mutate(
-      {
-        itemId: editingItem.itemId,
-        name: data.name.trim(),
-        description: data.description.trim(),
-        price: parseFloat(data.price),
-        category: data.category.trim(),
-      },
-      {
-        onSuccess: () => {
-          setEditingItem(null);
-        },
-      }
-    );
-  };
-
-  const handleToggle = (itemId: string) => {
-    toggleAvailability.mutate(itemId);
-  };
-
-  const handleDelete = () => {
-    if (!deletingItemId) return;
-    deleteMenuItem.mutate(deletingItemId, {
-      onSuccess: () => {
-        setDeletingItemId(null);
-      },
-    });
-  };
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-20 rounded-xl" />
-        ))}
+  const formFields = (
+    <>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
+        <input
+          type="text"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          required
+          className="w-full px-4 py-2.5 bg-white border border-orange-200 rounded-lg text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+          placeholder="e.g. Butter Chicken"
+        />
       </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <AlertCircle className="w-10 h-10 text-destructive mb-3" />
-        <p className="font-display font-semibold text-foreground mb-1">Failed to load menu</p>
-        <p className="text-sm text-muted-foreground mb-4">Please check your connection and try again.</p>
-        <Button variant="outline" onClick={() => refetch()} size="sm">
-          Try Again
-        </Button>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <textarea
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          rows={2}
+          className="w-full px-4 py-2.5 bg-white border border-orange-200 rounded-lg text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent resize-none"
+          placeholder="Brief description..."
+        />
       </div>
-    );
-  }
-
-  const allItems = menuItems ?? [];
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹)</label>
+          <input
+            type="number"
+            value={formData.price}
+            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+            required
+            min="0"
+            step="0.01"
+            className="w-full px-4 py-2.5 bg-white border border-orange-200 rounded-lg text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+            placeholder="0.00"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+          <input
+            type="text"
+            value={formData.category}
+            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            required
+            className="w-full px-4 py-2.5 bg-white border border-orange-200 rounded-lg text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+            placeholder="e.g. Main Course"
+          />
+        </div>
+      </div>
+    </>
+  );
 
   return (
     <div className="space-y-6">
-      {/* Header row */}
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-display text-xl font-800 text-foreground">Menu Items</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {allItems.length} item{allItems.length !== 1 ? 's' : ''} total ·{' '}
-            {allItems.filter((i) => i.available).length} available
-          </p>
+        <div className="flex items-center gap-2">
+          <ChefHat className="w-5 h-5 text-orange-500" />
+          <h2 className="font-display font-bold text-xl text-gray-800">Menu Management</h2>
         </div>
-        <Button onClick={() => setShowAddDialog(true)} className="gap-2">
+        <button
+          onClick={handleOpenAdd}
+          className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors shadow-orange"
+        >
           <Plus className="w-4 h-4" />
           Add Item
-        </Button>
+        </button>
       </div>
 
-      {/* Empty state */}
-      {allItems.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-border rounded-2xl">
-          <div className="w-16 h-16 bg-secondary rounded-2xl flex items-center justify-center mb-4">
-            <UtensilsCrossed className="w-8 h-8 text-muted-foreground" />
-          </div>
-          <p className="font-display font-semibold text-foreground mb-1">No menu items yet</p>
-          <p className="text-sm text-muted-foreground mb-4">Add your first dish to get started.</p>
-          <Button onClick={() => setShowAddDialog(true)} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Add First Item
-          </Button>
+      {/* Loading */}
+      {isLoading && (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-xl border border-orange-100 p-4 animate-pulse">
+              <div className="h-4 bg-orange-100 rounded w-1/3 mb-2" />
+              <div className="h-3 bg-orange-50 rounded w-2/3" />
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Items grouped by category */}
-      {Object.entries(grouped)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([category, items]) => (
-          <div key={category} className="space-y-2">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-1">
-              {category}
-            </h3>
-            <div className="space-y-2">
-              {items.map((item) => (
-                <div
-                  key={item.itemId}
-                  className={`flex items-start gap-4 p-4 rounded-xl border transition-colors ${
-                    item.available
-                      ? 'bg-card border-border'
-                      : 'bg-muted/40 border-border/50 opacity-70'
-                  }`}
-                >
-                  {/* Item info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-foreground truncate">{item.name}</span>
-                      <Badge variant={item.available ? 'default' : 'secondary'} className="text-xs shrink-0">
-                        {item.available ? (
-                          <><Check className="w-3 h-3 mr-1" />Available</>
-                        ) : (
-                          <><X className="w-3 h-3 mr-1" />Hidden</>
-                        )}
-                      </Badge>
-                    </div>
-                    {item.description && (
-                      <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
-                        {item.description}
-                      </p>
-                    )}
-                    <p className="text-sm font-semibold text-primary mt-1">
-                      ₹{item.price.toFixed(2)}
-                    </p>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    {/* Availability toggle */}
-                    <div className="flex items-center gap-1.5">
-                      <Switch
-                        checked={item.available}
-                        onCheckedChange={() => handleToggle(item.itemId)}
-                        disabled={toggleAvailability.isPending && toggleAvailability.variables === item.itemId}
-                        aria-label={`Toggle availability for ${item.name}`}
-                      />
-                    </div>
-
-                    {/* Edit */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setEditingItem(item)}
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      aria-label={`Edit ${item.name}`}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-
-                    {/* Delete */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setDeletingItemId(item.itemId)}
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      aria-label={`Delete ${item.name}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-
-      {/* Add Item Dialog */}
-      <MenuItemFormDialog
-        title="Add New Menu Item"
-        description="Fill in the details for the new dish. It will be visible to customers immediately."
-        isOpen={showAddDialog}
-        onClose={() => setShowAddDialog(false)}
-        onSubmit={handleAdd}
-        isSubmitting={addMenuItem.isPending}
-        submitLabel="Add Item"
-      />
-
-      {/* Edit Item Dialog */}
-      {editingItem && (
-        <MenuItemFormDialog
-          key={editingItem.itemId}
-          title="Edit Menu Item"
-          description="Update the details for this dish."
-          initialData={itemToFormData(editingItem)}
-          isOpen={!!editingItem}
-          onClose={() => setEditingItem(null)}
-          onSubmit={handleEdit}
-          isSubmitting={updateMenuItem.isPending}
-          submitLabel="Save Changes"
-        />
+      {/* Empty state */}
+      {!isLoading && allItems.length === 0 && (
+        <div className="bg-white rounded-xl border border-orange-100 p-10 text-center">
+          <ChefHat className="w-12 h-12 text-orange-200 mx-auto mb-3" />
+          <p className="text-gray-500 font-medium">No menu items yet</p>
+          <p className="text-sm text-gray-400 mt-1">Click "Add Item" to create your first menu item</p>
+        </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deletingItemId} onOpenChange={(open) => { if (!open) setDeletingItemId(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Menu Item?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently remove the item from the menu. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMenuItem.isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleteMenuItem.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-2"
-            >
-              {deleteMenuItem.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Grouped items */}
+      {Object.entries(grouped).map(([category, categoryItems]) => (
+        <div key={category}>
+          <div className="flex items-center gap-3 mb-3">
+            <h3 className="font-display font-semibold text-gray-700">{category}</h3>
+            <div className="flex-1 h-px bg-orange-100" />
+            <span className="text-xs text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
+              {categoryItems.length}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {categoryItems.map((item) => (
+              <div
+                key={item.itemId}
+                className={`bg-white rounded-xl border shadow-sm p-4 flex items-center gap-3 transition-opacity ${
+                  item.available ? 'border-orange-100' : 'border-gray-200 opacity-60'
+                }`}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-gray-800 text-sm truncate">{item.name}</p>
+                    {!item.available && (
+                      <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                        Unavailable
+                      </span>
+                    )}
+                  </div>
+                  {item.description && (
+                    <p className="text-xs text-gray-500 truncate mt-0.5">{item.description}</p>
+                  )}
+                  <p className="text-sm font-bold text-orange-600 mt-1">₹{item.price.toFixed(2)}</p>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {/* Toggle availability — only calls toggleMenuItemAvailability, never delete */}
+                  <button
+                    onClick={() => handleToggle(item.itemId)}
+                    disabled={togglingItemId === item.itemId}
+                    className="p-1.5 rounded-lg hover:bg-orange-50 text-gray-500 hover:text-orange-600 transition-colors disabled:opacity-50"
+                    title={item.available ? 'Mark unavailable' : 'Mark available'}
+                  >
+                    {togglingItemId === item.itemId ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : item.available ? (
+                      <ToggleRight className="w-5 h-5 text-orange-500" />
+                    ) : (
+                      <ToggleLeft className="w-5 h-5 text-gray-400" />
+                    )}
+                  </button>
+
+                  {/* Edit */}
+                  <button
+                    onClick={() => handleOpenEdit(item)}
+                    className="p-1.5 rounded-lg hover:bg-orange-50 text-gray-500 hover:text-orange-600 transition-colors"
+                    title="Edit item"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+
+                  {/* Delete */}
+                  <button
+                    onClick={() => handleDelete(item.itemId)}
+                    disabled={deletingItemId === item.itemId}
+                    className="p-1.5 rounded-lg hover:bg-red-50 text-gray-500 hover:text-red-500 transition-colors disabled:opacity-50"
+                    title="Delete item"
+                  >
+                    {deletingItemId === item.itemId ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {/* Add Item Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={(open) => !open && handleCloseAdd()}>
+        <DialogContent className="bg-white border border-orange-100">
+          <DialogHeader>
+            <DialogTitle className="font-display text-gray-800">Add Menu Item</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAdd} className="space-y-4">
+            {addError && (
+              <Alert variant="destructive">
+                <AlertDescription>{addError}</AlertDescription>
+              </Alert>
+            )}
+            {formFields}
+            <DialogFooter>
+              <button
+                type="button"
+                onClick={handleCloseAdd}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={addMutation.isPending}
+                className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {addMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Adding...
+                  </>
+                ) : (
+                  'Add Item'
+                )}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Item Dialog */}
+      <Dialog open={!!editingItem} onOpenChange={(open) => !open && handleCloseEdit()}>
+        <DialogContent className="bg-white border border-orange-100">
+          <DialogHeader>
+            <DialogTitle className="font-display text-gray-800">Edit Menu Item</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdate} className="space-y-4">
+            {editError && (
+              <Alert variant="destructive">
+                <AlertDescription>{editError}</AlertDescription>
+              </Alert>
+            )}
+            {formFields}
+            <DialogFooter>
+              <button
+                type="button"
+                onClick={handleCloseEdit}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={updateMutation.isPending}
+                className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {updateMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -6,10 +6,16 @@ import Time "mo:core/Time";
 import Principal "mo:core/Principal";
 import Order "mo:core/Order";
 import Iter "mo:core/Iter";
-import AccessControl "authorization/access-control";
+
 import MixinAuthorization "authorization/MixinAuthorization";
+import AccessControl "authorization/access-control";
+
 
 actor {
+  // Integrate access control (required for initialization)
+  let accessControlState = AccessControl.initState();
+  include MixinAuthorization(accessControlState);
+
   type OrderStatus = {
     #pending;
     #accepted;
@@ -26,27 +32,6 @@ actor {
     price : Float;
     category : Text;
     available : Bool;
-  };
-
-  type MenuItemInput = {
-    name : Text;
-    description : Text;
-    price : Float;
-    category : Text;
-  };
-
-  type MenuItemUpdate = {
-    itemId : Text;
-    name : ?Text;
-    description : ?Text;
-    price : ?Float;
-    category : ?Text;
-  };
-
-  module MenuItem {
-    public func compare(a : MenuItem, b : MenuItem) : Order.Order {
-      Text.compare(a.itemId, b.itemId);
-    };
   };
 
   type OrderItem = {
@@ -69,27 +54,58 @@ actor {
     phone : Text;
   };
 
-  let accessControlState = AccessControl.initState();
-  include MixinAuthorization(accessControlState);
+  type MenuItemInput = {
+    name : Text;
+    description : Text;
+    price : Float;
+    category : Text;
+  };
+
+  module MenuItem {
+    public func compare(a : MenuItem, b : MenuItem) : Order.Order {
+      Text.compare(a.itemId, b.itemId);
+    };
+  };
+
+  type MenuItemUpdate = {
+    itemId : Text;
+    name : ?Text;
+    description : ?Text;
+    price : ?Float;
+    category : ?Text;
+  };
+
+  type ProfileInput = {
+    name : Text;
+    phone : Text;
+  };
+
+  type OrderInput = {
+    orderId : Text;
+    items : [OrderItem];
+  };
 
   let menu = Map.empty<Text, MenuItem>();
   let orders = Map.empty<Text, CustomerOrder>();
   let customers = Map.empty<Principal, CustomerProfile>();
 
-  // ---- Profile API (required by frontend) ----
-
+  // ---- Profile API
   public query ({ caller }) func getCallerUserProfile() : async ?CustomerProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view their profile");
-    };
     customers.get(caller);
   };
 
-  public shared ({ caller }) func saveCallerUserProfile(profile : CustomerProfile) : async () {
+  public shared ({ caller }) func saveCallerUserProfile(profile : ProfileInput) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can save profiles");
     };
-    customers.add(caller, profile);
+    switch (customers.get(caller)) {
+      case (null) {
+        customers.add(caller, { name = profile.name; phone = profile.phone });
+      };
+      case (?customer) {
+        customers.add(caller, { customer with name = profile.name; phone = profile.phone });
+      };
+    };
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?CustomerProfile {
@@ -99,36 +115,11 @@ actor {
     customers.get(user);
   };
 
-  // ---- Legacy profile API ----
-
-  public query ({ caller }) func getProfile(customerId : Principal) : async ?CustomerProfile {
-    if (caller != customerId and not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Can only view your own profile");
-    };
-    customers.get(customerId);
-  };
-
-  public shared ({ caller }) func saveProfile(name : Text, phone : Text) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
-    };
-    switch (customers.get(caller)) {
-      case (null) {
-        customers.add(caller, { name; phone });
-      };
-      case (?profile) {
-        customers.add(caller, { profile with name; phone });
-      };
-    };
-  };
-
-  // ---- Menu management (admin-only writes, public reads) ----
-
+  // ---- Menu management
   public shared ({ caller }) func addMenuItem(input : MenuItemInput) : async MenuItem {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can add menu items");
     };
-
     let itemId = generateUniqueId(input.name, input.category);
 
     let newItem : MenuItem = {
@@ -180,7 +171,6 @@ actor {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can toggle menu item availability");
     };
-
     switch (menu.get(itemId)) {
       case (null) { Runtime.trap("Item not found") };
       case (?item) {
@@ -198,7 +188,6 @@ actor {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can delete menu items");
     };
-
     switch (menu.get(itemId)) {
       case (null) { Runtime.trap("Item not found") };
       case (?_item) {
@@ -220,16 +209,10 @@ actor {
     name # "_" # category # "_" # timestamp;
   };
 
-  // ---- Order management ----
-
-  type OrderInput = {
-    orderId : Text;
-    items : [OrderItem];
-  };
-
+  // ---- Order management
   public shared ({ caller }) func placeOrder(order : OrderInput) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only authenticated users can place orders");
+      Runtime.trap("Unauthorized: Only users can place orders");
     };
     if (orders.containsKey(order.orderId)) { Runtime.trap("Order ID already exists") };
     let totalPrice = order.items.foldLeft(0.0, func(acc, item) { acc + (item.price * item.quantity.toFloat()) });
@@ -245,22 +228,18 @@ actor {
   };
 
   public query ({ caller }) func getOrderById(orderId : Text) : async CustomerOrder {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view orders");
+    };
     switch (orders.get(orderId)) {
       case (null) { Runtime.trap("Order not found") };
       case (?order) {
-        if (caller != order.customerId and not AccessControl.isAdmin(accessControlState, caller)) {
+        if (order.customerId != caller and not AccessControl.isAdmin(accessControlState, caller)) {
           Runtime.trap("Unauthorized: Can only view your own orders");
         };
-        order
+        order;
       };
     };
-  };
-
-  public query ({ caller }) func getOrdersByCustomer(customerId : Principal) : async [CustomerOrder] {
-    if (caller != customerId and not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Can only view your own orders");
-    };
-    orders.values().toArray().filter(func(order) { order.customerId == customerId });
   };
 
   public query ({ caller }) func getAllOrders() : async [CustomerOrder] {
@@ -270,35 +249,10 @@ actor {
     orders.values().toArray();
   };
 
-  public shared ({ caller }) func updateOrderStatus(orderId : Text, status : OrderStatus) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can update order status");
+  public query ({ caller }) func getOrdersByCustomer(customerId : Principal) : async [CustomerOrder] {
+    if (customerId != caller and not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Can only view your own orders");
     };
-    switch (orders.get(orderId)) {
-      case (null) { Runtime.trap("Order not found") };
-      case (?order) {
-        let updatedOrder = {
-          order with
-          status
-        };
-        orders.add(orderId, updatedOrder);
-      };
-    };
-  };
-
-  public shared ({ caller }) func cancelOrder(orderId : Text) : async () {
-    switch (orders.get(orderId)) {
-      case (null) { Runtime.trap("Order not found") };
-      case (?order) {
-        if (caller != order.customerId and not AccessControl.isAdmin(accessControlState, caller)) {
-          Runtime.trap("Unauthorized: Can only cancel your own orders");
-        };
-        let updatedOrder = {
-          order with
-          status = #cancelled;
-        };
-        orders.add(orderId, updatedOrder);
-      };
-    };
+    orders.values().toArray().filter(func(order) { order.customerId == customerId });
   };
 };

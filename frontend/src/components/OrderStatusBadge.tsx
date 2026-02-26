@@ -1,55 +1,51 @@
+import React from 'react';
 import { OrderStatus } from '../backend';
 
 interface OrderStatusBadgeProps {
-  status: OrderStatus;
-  size?: 'sm' | 'md';
+  status: OrderStatus | string;
+  showDot?: boolean;
 }
 
-const STATUS_CONFIG: Record<
-  OrderStatus,
-  { label: string; className: string; dot: string }
-> = {
+const statusConfig: Record<string, { label: string; className: string }> = {
   [OrderStatus.pending]: {
     label: 'Pending',
-    className: 'status-pending',
-    dot: 'bg-yellow-400',
+    className: 'badge-pending',
   },
   [OrderStatus.accepted]: {
     label: 'Accepted',
-    className: 'status-accepted',
-    dot: 'bg-blue-400',
+    className: 'badge-accepted',
   },
   [OrderStatus.preparing]: {
     label: 'Preparing',
-    className: 'status-preparing',
-    dot: 'bg-cyan-400',
+    className: 'badge-preparing',
   },
   [OrderStatus.out_for_delivery]: {
     label: 'Out for Delivery',
-    className: 'status-out_for_delivery',
-    dot: 'bg-orange-400',
+    className: 'badge-out_for_delivery',
   },
   [OrderStatus.delivered]: {
     label: 'Delivered',
-    className: 'status-delivered',
-    dot: 'bg-green-400',
+    className: 'badge-delivered',
   },
   [OrderStatus.cancelled]: {
     label: 'Cancelled',
-    className: 'status-cancelled',
-    dot: 'bg-red-400',
+    className: 'badge-cancelled',
   },
 };
 
-export function OrderStatusBadge({ status, size = 'md' }: OrderStatusBadgeProps) {
-  const config = STATUS_CONFIG[status] ?? STATUS_CONFIG[OrderStatus.pending];
-  const sizeClass = size === 'sm' ? 'text-xs px-2 py-0.5' : 'text-xs px-2.5 py-1';
+export default function OrderStatusBadge({ status, showDot = true }: OrderStatusBadgeProps) {
+  const config = statusConfig[status as string] ?? {
+    label: String(status),
+    className: 'badge-pending',
+  };
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full font-medium border transition-all duration-300 ${config.className} ${sizeClass}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${config.className}`}
     >
-      <span className={`w-1.5 h-1.5 rounded-full ${config.dot} animate-pulse-soft`} />
+      {showDot && (
+        <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse-dot" />
+      )}
       {config.label}
     </span>
   );

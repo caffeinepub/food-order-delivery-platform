@@ -1,166 +1,196 @@
-import { CheckCircle2, Clock, RefreshCw, Package } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { OrderStatusBadge } from './OrderStatusBadge';
+import React from 'react';
+import { CheckCircle, Clock, ChefHat, Truck, Package, XCircle, Loader2 } from 'lucide-react';
 import { useOrderById } from '../hooks/useQueries';
-import { Skeleton } from '@/components/ui/skeleton';
 import { OrderStatus } from '../backend';
 
 interface OrderConfirmationProps {
   orderId: string;
-  onNewOrder: () => void;
+  onBackToMenu: () => void;
 }
 
 const STATUS_STEPS = [
-  { status: OrderStatus.pending, label: 'Order Placed', icon: '📋' },
-  { status: OrderStatus.accepted, label: 'Accepted', icon: '✅' },
-  { status: OrderStatus.preparing, label: 'Preparing', icon: '👨‍🍳' },
-  { status: OrderStatus.out_for_delivery, label: 'On the Way', icon: '🛵' },
-  { status: OrderStatus.delivered, label: 'Delivered', icon: '🎉' },
+  { key: OrderStatus.pending, label: 'Order Placed', icon: Clock, description: 'Your order has been received' },
+  { key: OrderStatus.accepted, label: 'Accepted', icon: CheckCircle, description: 'Restaurant accepted your order' },
+  { key: OrderStatus.preparing, label: 'Preparing', icon: ChefHat, description: 'Your food is being prepared' },
+  { key: OrderStatus.out_for_delivery, label: 'Out for Delivery', icon: Truck, description: 'Your order is on the way' },
+  { key: OrderStatus.delivered, label: 'Delivered', icon: Package, description: 'Enjoy your meal!' },
 ];
 
-const STATUS_ORDER = [
-  OrderStatus.pending,
-  OrderStatus.accepted,
-  OrderStatus.preparing,
-  OrderStatus.out_for_delivery,
-  OrderStatus.delivered,
-];
+function getStepIndex(status: OrderStatus): number {
+  const idx = STATUS_STEPS.findIndex((s) => s.key === status);
+  return idx >= 0 ? idx : 0;
+}
 
-export function OrderConfirmation({ orderId, onNewOrder }: OrderConfirmationProps) {
-  const { data: order, isLoading, refetch, isFetching } = useOrderById(orderId);
+export default function OrderConfirmation({ orderId, onBackToMenu }: OrderConfirmationProps) {
+  const { data: order, isLoading, error } = useOrderById(orderId);
 
-  const currentStatusIndex = order
-    ? STATUS_ORDER.indexOf(order.status as OrderStatus)
-    : 0;
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <Loader2 className="h-10 w-10 animate-spin text-orange-500" />
+        <p className="mt-4 text-gray-500 font-body">Loading your order...</p>
+      </div>
+    );
+  }
+
+  if (error || !order) {
+    return (
+      <div className="bg-white rounded-2xl shadow-card p-8 text-center">
+        <XCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+        <h2 className="text-xl font-display font-bold text-gray-800 mb-2">Order Not Found</h2>
+        <p className="text-gray-500 font-body mb-6">We couldn't find your order. It may have been placed while offline.</p>
+        <button
+          onClick={onBackToMenu}
+          className="px-6 py-2 bg-orange-500 text-white rounded-full font-body font-medium hover:bg-orange-600 transition-colors"
+        >
+          Back to Menu
+        </button>
+      </div>
+    );
+  }
+
+  const isCancelled = order.status === OrderStatus.cancelled;
+  const currentStepIndex = isCancelled ? -1 : getStepIndex(order.status);
 
   return (
-    <div className="max-w-lg mx-auto animate-fade-in">
-      {/* Success Header */}
-      <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <CheckCircle2 className="w-8 h-8 text-green-600" />
+    <div className="bg-white rounded-2xl shadow-card overflow-hidden">
+      {/* Header */}
+      <div className="bg-orange-500 px-6 py-5">
+        <div className="flex items-center gap-3">
+          {isCancelled ? (
+            <XCircle className="h-8 w-8 text-white" />
+          ) : (
+            <CheckCircle className="h-8 w-8 text-white" />
+          )}
+          <div>
+            <h2 className="text-xl font-display font-bold text-white">
+              {isCancelled ? 'Order Cancelled' : 'Order Confirmed!'}
+            </h2>
+            <p className="text-orange-100 text-sm font-body">Order #{orderId.slice(-8)}</p>
+          </div>
         </div>
-        <h2 className="font-display text-2xl font-800 text-foreground mb-2">
-          Order Confirmed! 🎉
-        </h2>
-        <p className="text-muted-foreground">
-          Your order has been placed successfully.
-        </p>
       </div>
 
-      {/* Order ID Card */}
-      <Card className="border border-border shadow-card mb-6">
-        <CardContent className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-1">
-                Order ID
-              </p>
-              <p className="font-display font-700 text-lg text-foreground">{orderId}</p>
-            </div>
-            {order && <OrderStatusBadge status={order.status as OrderStatus} />}
-          </div>
+      <div className="p-6">
+        {/* Status Stepper */}
+        {!isCancelled && (
+          <div className="mb-8">
+            <h3 className="text-sm font-body font-semibold text-gray-500 uppercase tracking-wide mb-4">
+              Order Status
+            </h3>
+            <div className="relative">
+              {/* Progress line */}
+              <div className="absolute left-5 top-5 bottom-5 w-0.5 bg-gray-100" />
+              <div
+                className="absolute left-5 top-5 w-0.5 bg-orange-500 transition-all duration-500"
+                style={{
+                  height: currentStepIndex > 0
+                    ? `${(currentStepIndex / (STATUS_STEPS.length - 1)) * 100}%`
+                    : '0%',
+                }}
+              />
 
-          {/* Progress Steps */}
-          {order?.status !== OrderStatus.cancelled && (
-            <div className="mt-4">
-              <div className="flex items-center justify-between relative">
-                <div className="absolute left-0 right-0 top-4 h-0.5 bg-border -z-0" />
-                <div
-                  className="absolute left-0 top-4 h-0.5 bg-primary transition-all duration-500 -z-0"
-                  style={{
-                    width: `${Math.max(0, (currentStatusIndex / (STATUS_STEPS.length - 1)) * 100)}%`,
-                  }}
-                />
-                {STATUS_STEPS.map((step, idx) => {
-                  const isCompleted = idx <= currentStatusIndex;
-                  const isCurrent = idx === currentStatusIndex;
+              <div className="space-y-6">
+                {STATUS_STEPS.map((step, index) => {
+                  const Icon = step.icon;
+                  const isCompleted = index < currentStepIndex;
+                  const isCurrent = index === currentStepIndex;
+                  const isPending = index > currentStepIndex;
+
                   return (
-                    <div key={step.status} className="flex flex-col items-center gap-1.5 z-10">
+                    <div key={step.key} className="flex items-start gap-4 relative">
                       <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all duration-300 ${
+                        className={`relative z-10 flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
                           isCompleted
-                            ? 'bg-primary text-primary-foreground shadow-sm'
-                            : 'bg-card border-2 border-border text-muted-foreground'
-                        } ${isCurrent ? 'ring-2 ring-primary ring-offset-2' : ''}`}
-                      >
-                        {step.icon}
-                      </div>
-                      <span
-                        className={`text-xs font-medium text-center leading-tight max-w-[60px] ${
-                          isCompleted ? 'text-foreground' : 'text-muted-foreground'
+                            ? 'bg-orange-500 border-orange-500'
+                            : isCurrent
+                            ? 'bg-white border-orange-500 shadow-orange'
+                            : 'bg-white border-gray-200'
                         }`}
                       >
-                        {step.label}
-                      </span>
+                        <Icon
+                          className={`h-5 w-5 ${
+                            isCompleted
+                              ? 'text-white'
+                              : isCurrent
+                              ? 'text-orange-500'
+                              : 'text-gray-300'
+                          }`}
+                        />
+                      </div>
+                      <div className="pt-1.5">
+                        <p
+                          className={`font-body font-semibold text-sm ${
+                            isPending ? 'text-gray-300' : 'text-gray-800'
+                          }`}
+                        >
+                          {step.label}
+                        </p>
+                        <p
+                          className={`font-body text-xs mt-0.5 ${
+                            isPending ? 'text-gray-200' : 'text-gray-500'
+                          }`}
+                        >
+                          {step.description}
+                        </p>
+                      </div>
+                      {isCurrent && (
+                        <div className="ml-auto pt-1.5">
+                          <span className="inline-flex items-center gap-1 text-xs font-body font-medium text-orange-500">
+                            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                            Current
+                          </span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        )}
 
-      {/* Order Details */}
-      {isLoading ? (
-        <Card className="border border-border shadow-card mb-6">
-          <CardContent className="p-5 space-y-3">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-24" />
-          </CardContent>
-        </Card>
-      ) : order ? (
-        <Card className="border border-border shadow-card mb-6">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <Package className="w-4 h-4 text-primary" />
-              <p className="font-medium text-sm text-foreground">Order Details</p>
-            </div>
-            <div className="space-y-2">
-              {order.items.map((item, idx) => (
-                <div key={idx} className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    {item.itemName} × {Number(item.quantity)}
-                  </span>
-                  <span className="font-medium text-foreground">
-                    ${(item.price * Number(item.quantity)).toFixed(2)}
-                  </span>
+        {/* Order Items */}
+        <div className="mb-6">
+          <h3 className="text-sm font-body font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            Order Summary
+          </h3>
+          <div className="space-y-2">
+            {order.items.map((item, index) => (
+              <div key={index} className="flex justify-between items-center py-2 border-b border-gray-50">
+                <div>
+                  <span className="font-body font-medium text-gray-800">{item.itemName}</span>
+                  <span className="text-gray-400 font-body text-sm ml-2">× {Number(item.quantity)}</span>
                 </div>
-              ))}
-              <div className="border-t border-border pt-2 flex justify-between font-display font-700">
-                <span>Total</span>
-                <span className="text-primary">${order.totalPrice.toFixed(2)}</span>
+                <span className="font-body font-semibold text-gray-700">
+                  ₹{(item.price * Number(item.quantity)).toFixed(2)}
+                </span>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
+            ))}
+          </div>
+          <div className="flex justify-between items-center pt-3 mt-1">
+            <span className="font-body font-bold text-gray-800">Total</span>
+            <span className="font-display font-bold text-orange-500 text-lg">
+              ₹{order.totalPrice.toFixed(2)}
+            </span>
+          </div>
+        </div>
 
-      {/* Live Status Note */}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary rounded-xl px-4 py-3 mb-6">
-        <Clock className="w-3.5 h-3.5 flex-shrink-0" />
-        <span>Status updates automatically every 8 seconds</span>
-        <button
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="ml-auto flex items-center gap-1 text-primary hover:underline disabled:opacity-50"
-        >
-          <RefreshCw className={`w-3 h-3 ${isFetching ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        {/* Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={onBackToMenu}
+            className="flex-1 px-6 py-3 bg-orange-500 text-white rounded-xl font-body font-semibold hover:bg-orange-600 transition-colors"
+          >
+            Back to Menu
+          </button>
+        </div>
+
+        {/* Polling indicator */}
+        <p className="text-center text-xs text-gray-300 font-body mt-4">
+          Status updates automatically every 8 seconds
+        </p>
       </div>
-
-      <Button
-        variant="outline"
-        className="w-full h-11 font-semibold"
-        onClick={onNewOrder}
-      >
-        Place Another Order
-      </Button>
     </div>
   );
 }

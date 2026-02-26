@@ -2,11 +2,71 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-add-a-pin-based-access-gate-to-the-courier-app-at-courier-when-a-user-visits-the-route-they-must-first-see-a-pin-entry-screen-styled-with-the-app-s-warm-orange-cream-theme-instead-of-the-dashboard-if-the-user-enters-the-pin-1953-and-submits-access-is-granted-and-the-full-courier-app-dashboard-is-shown-if-the-pin-is-incorrect-display-a-clear-error-message-the-granted-access-state-must-be-persisted-in-localstorage-so-the-user-does-not-need-to-re-enter-the-pin-on-page-refresh-a-lock-or-sign-out-button-must-be-visible-in-the-courier-app-ui-to-clear-the-access-state-and-return-the-user-to-the-pin-entry-screen-remove-or-bypass-any-existing-internet-identity-role-based-access-control-checks-that-are-currently-blocking-users-in-courierapp-tsx",
-      "featureTitle": "Add a PIN-based access gate to the Courier App at '/courier'. When a user visits the route, they must first see a PIN entry screen (styled with the app's warm orange/cream theme) instead of the dashboard. If the user enters the PIN '1953' and submits, access is granted and the full Courier App dashboard is shown. If the PIN is incorrect, display a clear error message. The granted access state must be persisted in localStorage so the user does not need to re-enter the PIN on page refresh. A 'Lock' or 'Sign Out' button must be visible in the Courier App UI to clear the access state and return the user to the PIN entry screen. Remove or bypass any existing Internet Identity / role-based access control checks that are currently blocking users in CourierApp.tsx.",
+      "featureId": "feature-fix-the-customer-portal-frontend-src-pages-customerportal-tsx-and-frontend-src-hooks-usequeries-ts-so-that-the-active-recent-order-state-is-never-held-exclusively-in-transient-react-component-state-on-mount-and-on-navigation-to-the-menu-or-order-confirmation-view-the-portal-must-re-fetch-the-user-s-latest-orders-from-the-backend-via-getordersbycustomer-the-useordersbycustomer-hook-must-be-enabled-whenever-the-actor-and-identity-are-available-and-its-result-must-be-the-authoritative-source-of-order-data-not-sessionstorage-or-in-memory-state-alone",
+      "featureTitle": "Fix the Customer Portal (`frontend/src/pages/CustomerPortal.tsx` and `frontend/src/hooks/useQueries.ts`) so that the active/recent order state is never held exclusively in transient React component state. On mount and on navigation to the Menu or Order Confirmation view, the portal must re-fetch the user's latest orders from the backend via `getOrdersByCustomer`. The `useOrdersByCustomer` hook must be enabled whenever the actor and identity are available, and its result must be the authoritative source of order data — not sessionStorage or in-memory state alone.",
       "files": [
-        "frontend/src/components/CourierPinGate.tsx",
-        "frontend/src/hooks/useCourierAccess.ts",
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/CustomerPortal.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-34"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-fix-the-orderconfirmation-component-frontend-src-components-orderconfirmation-tsx-to-poll-getorderbyid-or-equivalent-for-the-specific-order-s-latest-status-every-8-seconds-the-status-displayed-in-the-progress-stepper-must-always-reflect-the-value-returned-from-the-backend-not-local-component-state-set-at-order-placement-time-on-remount-e-g-after-a-page-refresh-the-component-must-accept-the-orderid-prop-and-immediately-fetch-the-current-status-from-the-backend-before-rendering",
+      "featureTitle": "Fix the `OrderConfirmation` component (`frontend/src/components/OrderConfirmation.tsx`) to poll `getOrderById` (or equivalent) for the specific order's latest status every 8 seconds. The status displayed in the progress stepper must always reflect the value returned from the backend, not local component state set at order placement time. On remount (e.g., after a page refresh), the component must accept the `orderId` prop and immediately fetch the current status from the backend before rendering.",
+      "files": [
+        "frontend/src/components/OrderConfirmation.tsx",
+        "frontend/src/hooks/useQueries.ts"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-35"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-fix-the-myordersview-component-frontend-src-components-myordersview-tsx-and-its-underlying-useordersbycustomer-hook-in-frontend-src-hooks-usequeries-ts-to-poll-for-updated-order-statuses-the-query-must-refetch-at-least-every-15-seconds-when-the-view-is-active-and-must-also-refetch-immediately-after-any-order-related-mutation-place-order-cancel-order-status-badges-displayed-in-the-order-history-list-must-reflect-the-latest-value-from-the-backend",
+      "featureTitle": "Fix the `MyOrdersView` component (`frontend/src/components/MyOrdersView.tsx`) and its underlying `useOrdersByCustomer` hook in `frontend/src/hooks/useQueries.ts` to poll for updated order statuses. The query must refetch at least every 15 seconds when the view is active, and must also refetch immediately after any order-related mutation (place order, cancel order). Status badges displayed in the order history list must reflect the latest value from the backend.",
+      "files": [
+        "frontend/src/components/MyOrdersView.tsx",
+        "frontend/src/hooks/useQueries.ts"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-36"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-fix-the-courier-app-dashboard-frontend-src-pages-courierapp-tsx-and-frontend-src-hooks-usequeries-ts-so-that-on-every-mount-including-after-a-hard-page-refresh-it-re-fetches-all-orders-from-the-backend-via-actor-getallorders-order-status-displayed-on-each-ordercard-must-come-directly-from-the-fetched-backend-data-not-from-local-component-state-the-useallorders-query-must-also-automatically-refetch-every-15-seconds-to-stay-current-and-must-invalidate-and-refetch-after-any-acceptorder-or-updateorderstatus-mutation-completes",
+      "featureTitle": "Fix the Courier App dashboard (`frontend/src/pages/CourierApp.tsx` and `frontend/src/hooks/useQueries.ts`) so that on every mount (including after a hard page refresh) it re-fetches all orders from the backend via `actor.getAllOrders()`. Order status displayed on each `OrderCard` must come directly from the fetched backend data, not from local component state. The `useAllOrders` query must also automatically refetch every 15 seconds to stay current, and must invalidate and refetch after any `acceptOrder` or `updateOrderStatus` mutation completes.",
+      "files": [
+        "frontend/src/components/OrderCard.tsx",
+        "frontend/src/hooks/useQueries.ts",
         "frontend/src/pages/CourierApp.tsx"
       ],
       "components": [
@@ -18,7 +78,7 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-18"
+        "REQ-37"
       ],
       "confidence": "high"
     }

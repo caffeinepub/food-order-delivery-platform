@@ -1,259 +1,226 @@
-import { useState } from 'react';
-import { Truck, RefreshCw, AlertCircle, Package, Heart, Loader2, Lock, UtensilsCrossed, ClipboardList } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { OrderCard } from '../components/OrderCard';
-import { OrderFilters } from '../components/OrderFilters';
-import { MenuManagementSection } from '../components/MenuManagementSection';
-import { CourierPinGate } from '../components/CourierPinGate';
-import { useAllOrders } from '../hooks/useQueries';
+import React, { useState } from 'react';
+import { Package, RefreshCw, Loader2 } from 'lucide-react';
+import { useAllOrders, useUpdateOrderStatus, useCancelOrder } from '../hooks/useQueries';
+import OrderCard from '../components/OrderCard';
+import OrderFilters from '../components/OrderFilters';
+import CourierPinGate from '../components/CourierPinGate';
+import MenuManagementSection from '../components/MenuManagementSection';
 import { useCourierAccess } from '../hooks/useCourierAccess';
-import { OrderStatus, type CustomerOrder } from '../backend';
+import { CustomerOrder, OrderStatus } from '../backend';
 
-type CourierTab = 'orders' | 'menu';
+type Tab = 'orders' | 'menu';
 
-export function CourierApp() {
-  const [activeFilter, setActiveFilter] = useState<OrderStatus | 'all'>('all');
-  const [activeTab, setActiveTab] = useState<CourierTab>('orders');
+export default function CourierApp() {
+  const { hasAccess, grantAccess } = useCourierAccess();
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [activeTab, setActiveTab] = useState<Tab>('orders');
 
-  const { hasAccess, grantAccess, revokeAccess } = useCourierAccess();
-  const { data: orders, isLoading, isError, error, refetch, isFetching } = useAllOrders();
+  // Always fetch from backend on mount and poll every 15 seconds
+  const { data: orders = [], isLoading, isFetching, error, refetch } = useAllOrders();
+  const updateStatusMutation = useUpdateOrderStatus();
+  const cancelOrderMutation = useCancelOrder();
 
-  const hostname = typeof window !== 'undefined' ? window.location.hostname : 'unknown-app';
-  const appId = encodeURIComponent(hostname);
-
-  // Show PIN gate if not authenticated
   if (!hasAccess) {
-    return <CourierPinGate onAccessGranted={grantAccess} />;
+    return <CourierPinGate onAccess={grantAccess} />;
   }
 
-  // Count orders per status
-  const counts = (orders ?? []).reduce<Record<string, number>>((acc, order) => {
-    const s = order.status as string;
-    acc[s] = (acc[s] ?? 0) + 1;
-    return acc;
-  }, {});
+  const filteredOrders = activeFilter === 'all'
+    ? orders
+    : orders.filter((o) => o.status === activeFilter);
 
-  // Filter orders
-  const filteredOrders: CustomerOrder[] = (orders ?? []).filter((order) => {
-    if (activeFilter === 'all') return true;
-    return order.status === activeFilter;
-  });
-
-  // Sort: pending first, then by timestamp desc
+  // Sort: active orders first, then by timestamp descending
   const sortedOrders = [...filteredOrders].sort((a, b) => {
-    const statusPriority: Record<string, number> = {
-      [OrderStatus.pending]: 0,
-      [OrderStatus.accepted]: 1,
-      [OrderStatus.preparing]: 2,
-      [OrderStatus.out_for_delivery]: 3,
-      [OrderStatus.delivered]: 4,
-      [OrderStatus.cancelled]: 5,
-    };
-    const pa = statusPriority[a.status as string] ?? 99;
-    const pb = statusPriority[b.status as string] ?? 99;
-    if (pa !== pb) return pa - pb;
-    return Number(b.timestamp - a.timestamp);
+    const activeStatuses: string[] = [
+      OrderStatus.pending,
+      OrderStatus.accepted,
+      OrderStatus.preparing,
+      OrderStatus.out_for_delivery,
+    ];
+    const aActive = activeStatuses.includes(a.status as string);
+    const bActive = activeStatuses.includes(b.status as string);
+    if (aActive && !bActive) return -1;
+    if (!aActive && bActive) return 1;
+    return Number(b.timestamp) - Number(a.timestamp);
   });
 
-  const activeOrdersCount = (orders ?? []).filter(
-    (o) =>
-      o.status !== OrderStatus.delivered && o.status !== OrderStatus.cancelled
+  const pendingCount = orders.filter((o) => o.status === OrderStatus.pending).length;
+  const activeCount = orders.filter((o) =>
+    ([OrderStatus.accepted, OrderStatus.preparing, OrderStatus.out_for_delivery] as string[]).includes(o.status as string)
   ).length;
 
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Courier Header */}
-      <header className="sticky top-0 z-50 bg-card border-b border-border shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0">
-                <img
-                  src="/assets/generated/courier-icon.dim_128x128.png"
-                  alt="Courier"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <span className="font-display font-800 text-xl text-foreground tracking-tight">
-                The Deccan <span className="text-primary">BHOJAN</span>{' '}
-                <span className="text-muted-foreground font-normal text-base">Courier</span>
-              </span>
-            </div>
+  const year = new Date().getFullYear();
+  const appId = encodeURIComponent(
+    typeof window !== 'undefined' ? window.location.hostname : 'the-deccan-bhojan'
+  );
 
-            <div className="flex items-center gap-2">
-              {activeTab === 'orders' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => refetch()}
-                  disabled={isFetching}
-                  className="gap-2"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={revokeAccess}
-                className="gap-2"
-              >
-                <Lock className="w-4 h-4" />
-                Lock
-              </Button>
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Header */}
+      <header className="bg-orange-500 sticky top-0 z-40 shadow-orange">
+        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img
+              src="/assets/generated/courier-icon.dim_128x128.png"
+              alt="Courier"
+              className="h-9 w-9 rounded-xl object-cover"
+            />
+            <div>
+              <h1 className="font-display font-bold text-white text-lg leading-tight">
+                Courier Dashboard
+              </h1>
+              <p className="text-orange-100 text-xs">The Deccan BHOJAN</p>
             </div>
           </div>
+          <div className="flex items-center gap-3">
+            {pendingCount > 0 && (
+              <span className="bg-white text-orange-500 text-xs font-bold px-2.5 py-1 rounded-full">
+                {pendingCount} new
+              </span>
+            )}
+            <button
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="p-2 rounded-full bg-orange-400 hover:bg-orange-600 transition-colors disabled:opacity-50"
+              title="Refresh orders"
+            >
+              <RefreshCw className={`h-4 w-4 text-white ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="max-w-5xl mx-auto px-4 pb-0 flex gap-1">
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-colors ${
+              activeTab === 'orders'
+                ? 'bg-white text-orange-500'
+                : 'text-orange-100 hover:text-white'
+            }`}
+          >
+            Orders
+            {activeCount > 0 && (
+              <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
+                activeTab === 'orders' ? 'bg-orange-100 text-orange-600' : 'bg-orange-400 text-white'
+              }`}>
+                {activeCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('menu')}
+            className={`px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-colors ${
+              activeTab === 'menu'
+                ? 'bg-white text-orange-500'
+                : 'text-orange-100 hover:text-white'
+            }`}
+          >
+            Menu Management
+          </button>
         </div>
       </header>
 
-      <main className="flex-1">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-          {/* Tab Navigation */}
-          <div className="flex items-center gap-1 mb-8 border-b border-border">
-            <button
-              onClick={() => setActiveTab('orders')}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors -mb-px ${
-                activeTab === 'orders'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-              }`}
-            >
-              <ClipboardList className="w-4 h-4" />
-              Orders
-              {activeOrdersCount > 0 && (
-                <span className="ml-1 bg-primary text-primary-foreground text-xs font-semibold rounded-full px-1.5 py-0.5 leading-none">
-                  {activeOrdersCount}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('menu')}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors -mb-px ${
-                activeTab === 'menu'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-              }`}
-            >
-              <UtensilsCrossed className="w-4 h-4" />
-              Menu Management
-            </button>
-          </div>
-
-          {/* Orders Tab */}
-          {activeTab === 'orders' && (
-            <>
-              {/* Page Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                <div>
-                  <h1 className="font-display text-2xl font-800 text-foreground">
-                    Courier Dashboard
-                  </h1>
-                  <p className="text-sm text-muted-foreground mt-0.5">
-                    {isLoading
-                      ? 'Loading orders...'
-                      : `${orders?.length ?? 0} total orders · ${activeOrdersCount} active`}
-                  </p>
-                </div>
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6">
+        {activeTab === 'orders' && (
+          <>
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="bg-white rounded-2xl shadow-card p-4 text-center">
+                <p className="text-2xl font-display font-bold text-orange-500">{orders.length}</p>
+                <p className="text-xs text-gray-500 mt-1">Total Orders</p>
               </div>
-
-              {/* Filters */}
-              <div className="mb-6">
-                <OrderFilters
-                  activeFilter={activeFilter}
-                  onFilterChange={setActiveFilter}
-                  counts={counts}
-                />
+              <div className="bg-white rounded-2xl shadow-card p-4 text-center">
+                <p className="text-2xl font-display font-bold text-yellow-500">{pendingCount}</p>
+                <p className="text-xs text-gray-500 mt-1">Pending</p>
               </div>
+              <div className="bg-white rounded-2xl shadow-card p-4 text-center">
+                <p className="text-2xl font-display font-bold text-green-500">{activeCount}</p>
+                <p className="text-xs text-gray-500 mt-1">Active</p>
+              </div>
+            </div>
 
-              {/* Content */}
-              {isLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <Skeleton key={i} className="h-48 rounded-2xl" />
-                  ))}
-                </div>
-              ) : isError ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <AlertCircle className="w-10 h-10 text-destructive mb-3" />
-                  <p className="font-display font-semibold text-foreground mb-1">
-                    Failed to load orders
-                  </p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {(error as Error)?.message?.includes('Unauthorized')
-                      ? 'Your session may have expired. Try locking and re-entering your PIN.'
-                      : 'Please check your connection and try again.'}
-                  </p>
-                  <Button variant="outline" onClick={() => refetch()} size="sm">
-                    Try Again
-                  </Button>
-                </div>
-              ) : sortedOrders.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="w-16 h-16 bg-secondary rounded-2xl flex items-center justify-center mb-4">
-                    {activeFilter === 'all' ? (
-                      <Truck className="w-8 h-8 text-muted-foreground" />
-                    ) : (
-                      <Package className="w-8 h-8 text-muted-foreground" />
-                    )}
-                  </div>
-                  <p className="font-display font-semibold text-foreground mb-1">
-                    {activeFilter === 'all' ? 'No orders yet' : `No ${activeFilter.replace(/_/g, ' ')} orders`}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {activeFilter === 'all'
-                      ? 'Orders from customers will appear here'
-                      : 'Try a different filter to see other orders'}
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {sortedOrders.map((order) => (
-                    <OrderCard key={order.orderId} order={order} />
-                  ))}
-                </div>
-              )}
+            {/* Filters — uses the existing OrderFilters component interface */}
+            <OrderFilters
+              activeFilter={activeFilter}
+              onFilterChange={setActiveFilter}
+              orders={orders}
+            />
 
-              {/* Auto-refresh note */}
-              {!isLoading && !isError && (
-                <p className="text-center text-xs text-muted-foreground mt-8">
-                  Dashboard auto-refreshes every 10 seconds
+            {/* Orders List */}
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <Loader2 className="h-10 w-10 animate-spin text-orange-500" />
+                <p className="mt-4 text-gray-500">Loading orders...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-16">
+                <p className="text-red-400 mb-4">Failed to load orders.</p>
+                <button
+                  onClick={() => refetch()}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-full text-sm hover:bg-orange-600 transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : sortedOrders.length === 0 ? (
+              <div className="text-center py-16">
+                <Package className="h-12 w-12 text-orange-200 mx-auto mb-4" />
+                <h3 className="text-lg font-display font-semibold text-gray-600 mb-2">
+                  {activeFilter === 'all' ? 'No Orders Yet' : `No ${activeFilter} orders`}
+                </h3>
+                <p className="text-gray-400">
+                  {activeFilter === 'all'
+                    ? 'Orders will appear here when customers place them.'
+                    : 'Try a different filter to see other orders.'}
                 </p>
-              )}
-            </>
-          )}
+              </div>
+            ) : (
+              <div className="space-y-4 mt-4">
+                {sortedOrders.map((order: CustomerOrder) => (
+                  <OrderCard
+                    key={order.orderId}
+                    order={order}
+                    onUpdateStatus={(orderId, status) =>
+                      updateStatusMutation.mutate({ orderId, status })
+                    }
+                    onCancelOrder={(orderId) => cancelOrderMutation.mutate(orderId)}
+                    isUpdating={
+                      (updateStatusMutation.isPending &&
+                        (updateStatusMutation.variables as { orderId: string } | undefined)?.orderId === order.orderId) ||
+                      (cancelOrderMutation.isPending &&
+                        cancelOrderMutation.variables === order.orderId)
+                    }
+                  />
+                ))}
+              </div>
+            )}
 
-          {/* Menu Management Tab */}
-          {activeTab === 'menu' && (
-            <MenuManagementSection />
-          )}
-        </div>
+            {orders.length > 0 && (
+              <p className="text-center text-xs text-gray-300 mt-6">
+                Orders refresh automatically every 15 seconds
+              </p>
+            )}
+          </>
+        )}
+
+        {activeTab === 'menu' && <MenuManagementSection />}
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-card mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <span className="font-display font-semibold text-foreground">
-                The Deccan <span className="text-primary">BHOJAN</span>
-              </span>
-              <span>© {new Date().getFullYear()}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              Built with <Heart className="w-3.5 h-3.5 fill-primary text-primary mx-0.5" /> using{' '}
-              <a
-                href={`https://caffeine.ai/?utm_source=Caffeine-footer&utm_medium=referral&utm_content=${appId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-primary hover:underline"
-              >
-                caffeine.ai
-              </a>
-            </div>
-          </div>
+      <footer className="bg-white border-t border-orange-100 py-5 mt-auto">
+        <div className="max-w-5xl mx-auto px-4 text-center">
+          <p className="text-sm text-gray-500">© {year} The Deccan BHOJAN. All rights reserved.</p>
+          <p className="text-xs text-gray-400 mt-1">
+            Built with ❤️ using{' '}
+            <a
+              href={`https://caffeine.ai/?utm_source=Caffeine-footer&utm_medium=referral&utm_content=${appId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-orange-500 hover:text-orange-600 underline"
+            >
+              caffeine.ai
+            </a>
+          </p>
         </div>
       </footer>
     </div>

@@ -56,6 +56,10 @@ export const OrderInput = IDL.Record({
   'orderId' : IDL.Text,
   'items' : IDL.Vec(OrderItem),
 });
+export const ProfileInput = IDL.Record({
+  'name' : IDL.Text,
+  'phone' : IDL.Text,
+});
 export const MenuItemUpdate = IDL.Record({
   'itemId' : IDL.Text,
   'name' : IDL.Opt(IDL.Text),
@@ -68,7 +72,6 @@ export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'addMenuItem' : IDL.Func([MenuItemInput], [MenuItem], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-  'cancelOrder' : IDL.Func([IDL.Text], [], []),
   'deleteMenuItem' : IDL.Func([IDL.Text], [], []),
   'getAllOrders' : IDL.Func([], [IDL.Vec(CustomerOrder)], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(CustomerProfile)], ['query']),
@@ -81,11 +84,6 @@ export const idlService = IDL.Service({
       [IDL.Vec(CustomerOrder)],
       ['query'],
     ),
-  'getProfile' : IDL.Func(
-      [IDL.Principal],
-      [IDL.Opt(CustomerProfile)],
-      ['query'],
-    ),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(CustomerProfile)],
@@ -93,11 +91,9 @@ export const idlService = IDL.Service({
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'placeOrder' : IDL.Func([OrderInput], [], []),
-  'saveCallerUserProfile' : IDL.Func([CustomerProfile], [], []),
-  'saveProfile' : IDL.Func([IDL.Text, IDL.Text], [], []),
+  'saveCallerUserProfile' : IDL.Func([ProfileInput], [], []),
   'toggleMenuItemAvailability' : IDL.Func([IDL.Text], [MenuItem], []),
   'updateMenuItem' : IDL.Func([MenuItemUpdate], [MenuItem], []),
-  'updateOrderStatus' : IDL.Func([IDL.Text, OrderStatus], [], []),
 });
 
 export const idlInitArgs = [];
@@ -148,6 +144,7 @@ export const idlFactory = ({ IDL }) => {
     'orderId' : IDL.Text,
     'items' : IDL.Vec(OrderItem),
   });
+  const ProfileInput = IDL.Record({ 'name' : IDL.Text, 'phone' : IDL.Text });
   const MenuItemUpdate = IDL.Record({
     'itemId' : IDL.Text,
     'name' : IDL.Opt(IDL.Text),
@@ -160,7 +157,6 @@ export const idlFactory = ({ IDL }) => {
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'addMenuItem' : IDL.Func([MenuItemInput], [MenuItem], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-    'cancelOrder' : IDL.Func([IDL.Text], [], []),
     'deleteMenuItem' : IDL.Func([IDL.Text], [], []),
     'getAllOrders' : IDL.Func([], [IDL.Vec(CustomerOrder)], ['query']),
     'getCallerUserProfile' : IDL.Func(
@@ -177,11 +173,6 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(CustomerOrder)],
         ['query'],
       ),
-    'getProfile' : IDL.Func(
-        [IDL.Principal],
-        [IDL.Opt(CustomerProfile)],
-        ['query'],
-      ),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(CustomerProfile)],
@@ -189,11 +180,9 @@ export const idlFactory = ({ IDL }) => {
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'placeOrder' : IDL.Func([OrderInput], [], []),
-    'saveCallerUserProfile' : IDL.Func([CustomerProfile], [], []),
-    'saveProfile' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'saveCallerUserProfile' : IDL.Func([ProfileInput], [], []),
     'toggleMenuItemAvailability' : IDL.Func([IDL.Text], [MenuItem], []),
     'updateMenuItem' : IDL.Func([MenuItemUpdate], [MenuItem], []),
-    'updateOrderStatus' : IDL.Func([IDL.Text, OrderStatus], [], []),
   });
 };
 

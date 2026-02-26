@@ -1,13 +1,15 @@
 # Specification
 
 ## Summary
-**Goal:** Add a PIN-based access gate to the Courier App at `/courier`, replacing any existing Internet Identity / role-based access checks with a simple PIN entry screen.
+**Goal:** Fix order persistence and status synchronization bugs across the backend, Customer Portal, and Courier App for The Deccan BHOJAN.
 
 **Planned changes:**
-- Add a PIN entry screen that renders when a user visits `/courier` without a stored access token; the screen uses the app's warm orange/cream theme.
-- Entering PIN `1953` grants access and shows the full Courier App dashboard; any other PIN shows a visible error message.
-- Persist the granted access state in `localStorage` so the dashboard is shown on page refresh without re-entering the PIN.
-- Add a "Lock" button in the Courier App UI that clears the stored access state and returns the user to the PIN entry screen.
-- Remove or bypass any existing Internet Identity / role-based access control checks in `CourierApp.tsx` that currently block users.
+- Refactor the backend `placeOrder` function to store all orders in a single canonical stable map keyed by `orderId`, independent of the caller's principal.
+- Fix `getAllOrders` to return every entry from the unified orders map with no per-caller filtering.
+- Fix `getOrdersByCustomer` to query the same canonical map filtered only by the stored `customerId` field.
+- Update the Customer Portal to re-fetch orders from the backend via `getOrdersByCustomer` on mount and navigation, making backend data the authoritative source instead of transient React or sessionStorage state.
+- Fix the `OrderConfirmation` component to poll `getOrderById` every 8 seconds and display the live backend status in the progress stepper, including on hard refresh.
+- Fix the `MyOrdersView` component and `useOrdersByCustomer` hook to poll for updated statuses every 15 seconds and invalidate/refetch after any order mutation.
+- Fix the Courier App dashboard to re-fetch all orders via `getAllOrders` on every mount, source order status from backend data, poll every 15 seconds, and invalidate after `acceptOrder` or `updateOrderStatus` mutations.
 
-**User-visible outcome:** Visiting `/courier` shows a themed PIN entry screen. Entering `1953` grants immediate access to the full dashboard, which persists across refreshes. A Lock button lets the courier log out back to the PIN screen.
+**User-visible outcome:** Orders placed by customers persist across page refreshes on both the Customer Portal and Courier App. Status updates made by the courier are reflected on the Customer Portal within 15 seconds without a manual reload, and the Courier App no longer resets order statuses to "Accept Order" after a refresh.

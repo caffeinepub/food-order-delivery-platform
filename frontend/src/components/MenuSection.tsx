@@ -1,98 +1,86 @@
+import React from 'react';
+import { Plus, Minus, ShoppingCart } from 'lucide-react';
 import { type MenuItem } from '../backend';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Minus } from 'lucide-react';
 import { type CartItem } from '../hooks/useCart';
 
 interface MenuSectionProps {
   category: string;
   items: MenuItem[];
   cartItems: CartItem[];
-  onAdd: (item: MenuItem) => void;
+  onAddToCart: (item: MenuItem) => void;
   onUpdateQuantity: (itemId: string, quantity: number) => void;
 }
 
-const CATEGORY_EMOJI: Record<string, string> = {
-  Burgers: '🍔',
-  Sides: '🍟',
-  Drinks: '🥤',
-  Pizza: '🍕',
-  Salads: '🥗',
-  Desserts: '🍰',
-};
-
-export function MenuSection({
+export default function MenuSection({
   category,
   items,
   cartItems,
-  onAdd,
+  onAddToCart,
   onUpdateQuantity,
 }: MenuSectionProps) {
-  const emoji = CATEGORY_EMOJI[category] ?? '🍽️';
+  const getCartQuantity = (itemId: string) => {
+    const cartItem = cartItems.find((ci) => ci.itemId === itemId);
+    return cartItem ? cartItem.quantity : 0;
+  };
 
   return (
     <section className="mb-10">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-2xl">{emoji}</span>
-        <h2 className="font-display text-xl font-700 text-foreground">{category}</h2>
-        <span className="text-sm text-muted-foreground">({items.length})</span>
+      <div className="flex items-center gap-3 mb-5">
+        <h2 className="font-display font-bold text-xl text-gray-800">{category}</h2>
+        <div className="flex-1 h-px bg-orange-100" />
+        <span className="text-xs font-medium text-orange-500 bg-orange-50 px-2 py-1 rounded-full border border-orange-200">
+          {items.length} items
+        </span>
       </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((item) => {
-          const cartItem = cartItems.find((c) => c.itemId === item.itemId);
-          const qty = cartItem?.quantity ?? 0;
-
+          const qty = getCartQuantity(item.itemId);
           return (
-            <Card
+            <div
               key={item.itemId}
-              className="card-hover border border-border overflow-hidden"
+              className="bg-white rounded-xl border border-orange-100 shadow-card card-hover overflow-hidden"
             >
-              <CardContent className="p-4">
-                <div className="flex flex-col h-full">
-                  <div className="flex-1">
-                    <h3 className="font-display font-semibold text-foreground text-base leading-tight mb-1">
-                      {item.name}
-                    </h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed mb-3 line-clamp-2">
-                      {item.description}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between mt-auto pt-2 border-t border-border">
-                    <span className="font-display font-700 text-lg text-primary">
-                      ${item.price.toFixed(2)}
-                    </span>
-                    {qty === 0 ? (
-                      <Button
-                        size="sm"
-                        onClick={() => onAdd(item)}
-                        className="gap-1.5 h-8 px-3 text-xs font-semibold"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        Add
-                      </Button>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => onUpdateQuantity(item.itemId, qty - 1)}
-                          className="w-7 h-7 rounded-full bg-secondary border border-border flex items-center justify-center hover:bg-accent transition-colors"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="font-display font-700 text-sm w-5 text-center">
-                          {qty}
-                        </span>
-                        <button
-                          onClick={() => onUpdateQuantity(item.itemId, qty + 1)}
-                          className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 transition-opacity"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
+              <div className="p-4">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <h3 className="font-display font-semibold text-gray-800 text-sm leading-tight">
+                    {item.name}
+                  </h3>
+                  <span className="text-orange-600 font-bold text-sm whitespace-nowrap">
+                    ₹{item.price.toFixed(2)}
+                  </span>
                 </div>
-              </CardContent>
-            </Card>
+                {item.description && (
+                  <p className="text-xs text-gray-500 mb-3 line-clamp-2">{item.description}</p>
+                )}
+
+                {qty === 0 ? (
+                  <button
+                    onClick={() => onAddToCart(item)}
+                    className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    Add to Cart
+                  </button>
+                ) : (
+                  <div className="flex items-center justify-between bg-orange-50 rounded-lg p-1">
+                    <button
+                      onClick={() => onUpdateQuantity(item.itemId, qty - 1)}
+                      className="w-8 h-8 flex items-center justify-center bg-white hover:bg-orange-100 text-orange-600 rounded-md transition-colors border border-orange-200"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className="font-bold text-orange-700 text-sm">{qty}</span>
+                    <button
+                      onClick={() => onUpdateQuantity(item.itemId, qty + 1)}
+                      className="w-8 h-8 flex items-center justify-center bg-orange-500 hover:bg-orange-600 text-white rounded-md transition-colors"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           );
         })}
       </div>

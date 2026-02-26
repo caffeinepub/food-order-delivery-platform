@@ -1,53 +1,51 @@
-import { OrderStatus } from '../backend';
+import React from 'react';
+import { OrderStatus, CustomerOrder } from '../backend';
 
 interface OrderFiltersProps {
-  activeFilter: OrderStatus | 'all';
-  onFilterChange: (filter: OrderStatus | 'all') => void;
-  counts: Record<string, number>;
+  activeFilter: string;
+  onFilterChange: (filter: string) => void;
+  orders: CustomerOrder[];
 }
 
-const FILTERS: { value: OrderStatus | 'all'; label: string; emoji: string }[] = [
-  { value: 'all', label: 'All', emoji: '📋' },
-  { value: OrderStatus.pending, label: 'Pending', emoji: '⏳' },
-  { value: OrderStatus.accepted, label: 'Accepted', emoji: '✅' },
-  { value: OrderStatus.preparing, label: 'Preparing', emoji: '👨‍🍳' },
-  { value: OrderStatus.out_for_delivery, label: 'Delivery', emoji: '🛵' },
-  { value: OrderStatus.delivered, label: 'Delivered', emoji: '🎉' },
-  { value: OrderStatus.cancelled, label: 'Cancelled', emoji: '❌' },
+const filterOptions = [
+  { value: 'all', label: 'All Orders' },
+  { value: OrderStatus.pending, label: 'Pending' },
+  { value: OrderStatus.accepted, label: 'Accepted' },
+  { value: OrderStatus.preparing, label: 'Preparing' },
+  { value: OrderStatus.out_for_delivery, label: 'Out for Delivery' },
+  { value: OrderStatus.delivered, label: 'Delivered' },
+  { value: OrderStatus.cancelled, label: 'Cancelled' },
 ];
 
-export function OrderFilters({ activeFilter, onFilterChange, counts }: OrderFiltersProps) {
-  return (
-    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-      {FILTERS.map((filter) => {
-        const count = filter.value === 'all'
-          ? Object.values(counts).reduce((a, b) => a + b, 0)
-          : (counts[filter.value] ?? 0);
-        const isActive = activeFilter === filter.value;
+export default function OrderFilters({ activeFilter, onFilterChange, orders }: OrderFiltersProps) {
+  const getCount = (value: string) => {
+    if (value === 'all') return orders.length;
+    return orders.filter((o) => o.status === value).length;
+  };
 
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+      {filterOptions.map((option) => {
+        const count = getCount(option.value);
+        const isActive = activeFilter === option.value;
         return (
           <button
-            key={filter.value}
-            onClick={() => onFilterChange(filter.value)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-200 border ${
+            key={option.value}
+            onClick={() => onFilterChange(option.value)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors shrink-0 ${
               isActive
-                ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                : 'bg-card text-muted-foreground border-border hover:bg-accent hover:text-foreground'
+                ? 'bg-orange-500 text-white shadow-orange'
+                : 'bg-white text-gray-600 border border-orange-200 hover:bg-orange-50 hover:text-orange-600'
             }`}
           >
-            <span>{filter.emoji}</span>
-            <span>{filter.label}</span>
-            {count > 0 && (
-              <span
-                className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${
-                  isActive
-                    ? 'bg-primary-foreground/20 text-primary-foreground'
-                    : 'bg-muted text-muted-foreground'
-                }`}
-              >
-                {count}
-              </span>
-            )}
+            {option.label}
+            <span
+              className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+                isActive ? 'bg-white/20 text-white' : 'bg-orange-100 text-orange-600'
+              }`}
+            >
+              {count}
+            </span>
           </button>
         );
       })}
