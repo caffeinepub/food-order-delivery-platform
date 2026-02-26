@@ -1,94 +1,45 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix order persistence and status sync across Customer Portal and Courier App",
+  "title": "Simplify Courier App order actions to Delete and Deliver only",
   "requirements": [
     {
-      "id": "REQ-34",
-      "summary": "Fix Customer Portal to always re-fetch orders from backend instead of relying on transient React state",
+      "id": "REQ-56",
+      "summary": "Remove all intermediate status action buttons from order cards in the Courier App, keeping only Deliver and Delete buttons. The Deliver button must call updateOrderStatus to set status directly to 'delivered', and the Delete button must show a confirmation prompt then call useDeleteOrder.",
       "acceptanceCriteria": [
-        "After a hard page refresh on the Customer Portal, previously placed orders are visible under 'My Orders' without requiring re-login.",
-        "The Order Confirmation screen shows the persisted order fetched from the backend, not stale React state.",
-        "If the actor is not yet initialized, the query waits until it is available before firing (no null-actor calls)."
+        "Each order card in the Courier App shows exactly two action buttons: 'Deliver' and 'Delete'.",
+        "Clicking 'Deliver' marks the order as 'delivered' by calling the appropriate backend mutation.",
+        "Clicking 'Delete' shows a confirmation prompt; on confirmation, calls useDeleteOrder and the order disappears from the dashboard.",
+        "No 'Accept', 'Preparing', 'Out for Delivery', or any other intermediate status buttons are rendered on any order card.",
+        "The Deliver button is styled with the app's white and orange (#F97316) theme.",
+        "The Delete button is styled consistently with the app's white and orange (#F97316) theme."
       ],
       "file_operations": [
-        {
-          "path": "frontend/src/pages/CustomerPortal.tsx",
-          "operation": "modify",
-          "description": "Remove reliance on transient React state for active orders. On mount and on navigation to Menu or Order Confirmation views, ensure the portal re-fetches the user's latest orders from the backend via the useOrdersByCustomer hook. Remove or refactor any sessionStorage-based order caching that bypasses backend queries. Ensure the useOrdersByCustomer query is enabled whenever actor and identity are available, making the query result the authoritative source of order data."
-        },
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Ensure the useOrdersByCustomer query is enabled when both actor and identity are available (not just actor). Add proper actor dependency checks so the query waits until actor initialization completes before firing. Return loading state that properly reflects actor fetching status to prevent null-actor calls."
-        }
-      ]
-    },
-    {
-      "id": "REQ-35",
-      "summary": "Fix OrderConfirmation component to poll backend for live order status and display it in the progress stepper",
-      "acceptanceCriteria": [
-        "The Order Confirmation progress stepper shows the live backend status (e.g., 'preparing', 'out_for_delivery') rather than always starting at 'pending'.",
-        "Status polling runs every 8 seconds and updates the UI without a full page reload.",
-        "On hard refresh, the stepper immediately fetches and displays the current backend status for the stored orderId."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/OrderConfirmation.tsx",
-          "operation": "modify",
-          "description": "Add polling logic to fetch the specific order's latest status from the backend via getOrderById every 8 seconds using React Query's refetchInterval option. The status displayed in the progress stepper must always reflect the value returned from the backend, not local component state set at order placement time. On component mount (including after a page refresh), accept the orderId prop and immediately fetch the current status from the backend before rendering the stepper. Handle loading and error states gracefully."
-        },
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Add a new useOrderById query hook that fetches a single order by orderId from the backend using actor.getOrderById. Configure the query with refetchInterval set to 8000ms (8 seconds) to enable automatic polling. Ensure the query is enabled only when actor is available and orderId is provided. Return proper loading states to prevent rendering stale data."
-        }
-      ]
-    },
-    {
-      "id": "REQ-36",
-      "summary": "Fix MyOrdersView component to poll for updated order statuses and refetch after mutations",
-      "acceptanceCriteria": [
-        "When a courier advances an order status in the Courier App, the updated status badge appears in the Customer Portal's 'My Orders' view within 15 seconds without a manual refresh.",
-        "The useOrdersByCustomer query is invalidated and refetches after a successful placeOrder or cancelOrder mutation.",
-        "On hard page refresh, 'My Orders' shows the current status of all past orders sourced from the backend."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Configure the useOrdersByCustomer query with refetchInterval set to 15000ms (15 seconds) to poll for updated order statuses when the view is active. Ensure the placeOrder mutation invalidates the ['ordersByCustomer'] query key on success, triggering an immediate refetch. If a cancelOrder mutation exists, ensure it also invalidates the same query key."
-        },
-        {
-          "path": "frontend/src/components/MyOrdersView.tsx",
-          "operation": "modify",
-          "description": "Ensure the component relies solely on the useOrdersByCustomer query result for displaying order statuses. Remove any local state that overrides backend data. Status badges displayed in the order history list must reflect the latest value from the backend. Handle loading states during refetches to provide user feedback when polling updates occur."
-        }
-      ]
-    },
-    {
-      "id": "REQ-37",
-      "summary": "Fix Courier App dashboard to re-fetch all orders on mount and poll for updates every 15 seconds",
-      "acceptanceCriteria": [
-        "After a hard refresh of the Courier App, each order card displays the last known persisted status from the backend (e.g., 'preparing') rather than reverting to 'Accept Order'.",
-        "After the courier updates an order status, the updated status is reflected in the dashboard within one polling cycle (≤15 seconds) or immediately via query invalidation.",
-        "The actor is confirmed non-null before getAllOrders is called; loading and error states are handled gracefully."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/pages/CourierApp.tsx",
-          "operation": "modify",
-          "description": "Ensure the component re-fetches all orders from the backend via the useAllOrders hook on every mount, including after hard page refresh. Remove any local state that stores order status independently of the backend data. Order status displayed on each OrderCard must come directly from the fetched backend data. Confirm that loading and error states from the query are properly handled and displayed to the user."
-        },
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Configure the useAllOrders query with refetchInterval set to 15000ms (15 seconds) to automatically poll for updates. Ensure the query is enabled only when actor is non-null. Add query invalidation for ['allOrders'] in the acceptOrder and updateOrderStatus mutation onSuccess callbacks to trigger immediate refetch after status changes. Return proper loading states that account for actor initialization."
-        },
         {
           "path": "frontend/src/components/OrderCard.tsx",
           "operation": "modify",
-          "description": "Ensure the OrderCard component displays order status sourced directly from the order prop passed from the parent, not from any internal component state. Remove any logic that stores or overrides status locally. Confirm that action buttons trigger mutations that invalidate the allOrders query, causing the parent to refetch and pass updated data."
+          "description": "Remove all intermediate status advancement buttons (Accept, Preparing, Out for Delivery) from the order card component. Replace the existing status-flow logic with exactly two action buttons: (1) a 'Deliver' button that calls updateOrderStatus with status 'delivered' directly, and (2) a 'Delete' button that shows a confirmation dialog before calling the delete mutation. Style both buttons consistently with the app's white and orange (#F97316) theme. Ensure the Deliver button is prominent and uses the primary orange color, while the Delete button uses a neutral or warning style."
+        },
+        {
+          "path": "frontend/src/pages/CourierApp.tsx",
+          "operation": "modify",
+          "description": "Review and simplify any status-flow logic in the courier dashboard page. Ensure that order cards rendered here only display the two simplified action buttons (Deliver and Delete) with no intermediate status controls. Remove any conditional rendering logic that shows different buttons based on current order status, keeping only the two required actions available for all non-delivered, non-cancelled orders."
+        }
+      ]
+    },
+    {
+      "id": "REQ-57",
+      "summary": "Remove filter tabs for intermediate order statuses (accepted, preparing, out_for_delivery) from the Courier App filter bar. Keep only the simplified workflow statuses: pending, delivered, cancelled, and an All option.",
+      "acceptanceCriteria": [
+        "The order filter bar in the Courier App does not show 'Accepted', 'Preparing', or 'Out for Delivery' filter tabs.",
+        "Filter tabs present are: All, Pending, Delivered, and Cancelled.",
+        "Per-status counts in the filter bar reflect only the visible statuses."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/OrderFilters.tsx",
+          "operation": "modify",
+          "description": "Remove the filter tabs for 'accepted', 'preparing', and 'out_for_delivery' order statuses from the filter bar component. Keep only the tabs for 'All', 'pending', 'delivered', and 'cancelled'. Ensure the per-status count badges correctly reflect the counts for only these visible statuses. Update any TypeScript types or constants that define the available filter options to match the simplified workflow."
         }
       ]
     }

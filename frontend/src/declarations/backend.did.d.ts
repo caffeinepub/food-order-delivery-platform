@@ -53,6 +53,8 @@ export type OrderStatus = { 'preparing' : null } |
   { 'delivered' : null } |
   { 'accepted' : null };
 export interface ProfileInput { 'name' : string, 'phone' : string }
+export type Result = { 'ok' : null } |
+  { 'err' : { 'notFound' : null } };
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
@@ -61,13 +63,14 @@ export interface _SERVICE {
   'addMenuItem' : ActorMethod<[MenuItemInput], MenuItem>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'deleteMenuItem' : ActorMethod<[string], undefined>,
+  'deleteOrder' : ActorMethod<[string], Result>,
   'getAllOrders' : ActorMethod<[], Array<CustomerOrder>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [CustomerProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getMenu' : ActorMethod<[], Array<MenuItem>>,
   'getMenuByCategory' : ActorMethod<[string], Array<MenuItem>>,
   'getOrderById' : ActorMethod<[string], CustomerOrder>,
-  'getOrdersByCustomer' : ActorMethod<[Principal], Array<CustomerOrder>>,
+  'getOrdersByCustomerId' : ActorMethod<[Principal], Array<CustomerOrder>>,
   'getUserProfile' : ActorMethod<[Principal], [] | [CustomerProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'placeOrder' : ActorMethod<[OrderInput], undefined>,

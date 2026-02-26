@@ -1,116 +1,60 @@
 {
   "kind": "build_request",
-  "title": "Fix order persistence and status sync across Customer Portal and Courier App",
+  "title": "Simplify Courier App order actions to Delete and Deliver only",
   "projectName": "The Deccan BHOJAN",
-  "priority": "high",
+  "priority": "normal",
   "requirements": [
     {
-      "id": "REQ-33",
-      "text": "Audit and fix the backend `placeOrder` function in `backend/main.mo` to ensure every placed order is stored in a single canonical stable map keyed by `orderId`, independent of the caller's principal. Fix `getAllOrders` to return all entries from this single map without any per-caller or per-customer filtering. Fix `getOrdersByCustomer` to query from the same canonical map filtered only by the stored `customerId` field. If orders are currently stored in any per-caller or per-customer scoped structure that is not fully traversed by `getAllOrders`, refactor both functions to use the one unified stable orders map.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-7"
-        ],
-        "quotes": [
-          "orders dissapering on customer menu and order status returning to accept order on courier menu",
-          "order status not reflecting on customer side"
-        ]
-      },
-      "acceptanceCriteria": [
-        "An order placed by any caller principal is stored in a single stable orders map keyed by orderId.",
-        "getAllOrders returns every order in the map regardless of which principal placed it.",
-        "getOrdersByCustomer returns only orders whose stored customerId matches the requested principal, sourced from the same canonical map.",
-        "After a canister upgrade/restart, all previously placed orders are still retrievable via getAllOrders and getOrdersByCustomer."
-      ]
-    },
-    {
-      "id": "REQ-34",
-      "text": "Fix the Customer Portal (`frontend/src/pages/CustomerPortal.tsx` and `frontend/src/hooks/useQueries.ts`) so that the active/recent order state is never held exclusively in transient React component state. On mount and on navigation to the Menu or Order Confirmation view, the portal must re-fetch the user's latest orders from the backend via `getOrdersByCustomer`. The `useOrdersByCustomer` hook must be enabled whenever the actor and identity are available, and its result must be the authoritative source of order data — not sessionStorage or in-memory state alone.",
+      "id": "REQ-56",
+      "text": "In `frontend/src/components/OrderCard.tsx` and `frontend/src/pages/CourierApp.tsx`, remove all intermediate status action buttons (Accept, Preparing, Out for Delivery) from each order card. Each order card must display exactly two action buttons: (1) **Deliver** — calls `updateOrderStatus` to set the order status directly to `delivered`, and (2) **Delete** — shows a confirmation prompt then calls `useDeleteOrder`. No other status-advancement controls should be present.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-7"
+          "msg-recent-1"
         ],
         "quotes": [
-          "order dissapering on customer menu",
-          "Orders disappearing on Customer Portal refresh — frontend relies on transient React state instead of re-fetching from backend"
+          "remove all the prep stages and only keep delete, change it to deliver"
         ]
       },
       "acceptanceCriteria": [
-        "After a hard page refresh on the Customer Portal, previously placed orders are visible under 'My Orders' without requiring re-login.",
-        "The Order Confirmation screen shows the persisted order fetched from the backend, not stale React state.",
-        "If the actor is not yet initialized, the query waits until it is available before firing (no null-actor calls)."
+        "Each order card in the Courier App shows exactly two action buttons: 'Deliver' and 'Delete'.",
+        "Clicking 'Deliver' marks the order as 'delivered' by calling the appropriate backend mutation.",
+        "Clicking 'Delete' shows a confirmation prompt; on confirmation, calls useDeleteOrder and the order disappears from the dashboard.",
+        "No 'Accept', 'Preparing', 'Out for Delivery', or any other intermediate status buttons are rendered on any order card.",
+        "The Deliver button is styled with the app's white and orange (#F97316) theme.",
+        "The Delete button is styled consistently with the app's white and orange (#F97316) theme."
       ]
     },
     {
-      "id": "REQ-35",
-      "text": "Fix the `OrderConfirmation` component (`frontend/src/components/OrderConfirmation.tsx`) to poll `getOrderById` (or equivalent) for the specific order's latest status every 8 seconds. The status displayed in the progress stepper must always reflect the value returned from the backend, not local component state set at order placement time. On remount (e.g., after a page refresh), the component must accept the `orderId` prop and immediately fetch the current status from the backend before rendering.",
+      "id": "REQ-57",
+      "text": "In `frontend/src/components/OrderFilters.tsx`, remove filter tabs for `accepted`, `preparing`, and `out_for_delivery` statuses. The filter bar must only show tabs relevant to the simplified workflow: `pending`, `delivered`, and `cancelled` (plus an 'All' option).",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-7"
+          "msg-recent-1"
         ],
         "quotes": [
-          "order status returning to accept order on courier menu",
-          "Order status updates by courier do not reflect on Customer Portal — no polling or query invalidation in place"
+          "remove all the prep stages and only keep delete, change it to deliver"
         ]
       },
       "acceptanceCriteria": [
-        "The Order Confirmation progress stepper shows the live backend status (e.g., 'preparing', 'out_for_delivery') rather than always starting at 'pending'.",
-        "Status polling runs every 8 seconds and updates the UI without a full page reload.",
-        "On hard refresh, the stepper immediately fetches and displays the current backend status for the stored orderId."
-      ]
-    },
-    {
-      "id": "REQ-36",
-      "text": "Fix the `MyOrdersView` component (`frontend/src/components/MyOrdersView.tsx`) and its underlying `useOrdersByCustomer` hook in `frontend/src/hooks/useQueries.ts` to poll for updated order statuses. The query must refetch at least every 15 seconds when the view is active, and must also refetch immediately after any order-related mutation (place order, cancel order). Status badges displayed in the order history list must reflect the latest value from the backend.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-7"
-        ],
-        "quotes": [
-          "order status not reflecting on customer side",
-          "Order status updates by courier do not reflect on Customer Portal — no polling or query invalidation in place"
-        ]
-      },
-      "acceptanceCriteria": [
-        "When a courier advances an order status in the Courier App, the updated status badge appears in the Customer Portal's 'My Orders' view within 15 seconds without a manual refresh.",
-        "The useOrdersByCustomer query is invalidated and refetches after a successful placeOrder or cancelOrder mutation.",
-        "On hard page refresh, 'My Orders' shows the current status of all past orders sourced from the backend."
-      ]
-    },
-    {
-      "id": "REQ-37",
-      "text": "Fix the Courier App dashboard (`frontend/src/pages/CourierApp.tsx` and `frontend/src/hooks/useQueries.ts`) so that on every mount (including after a hard page refresh) it re-fetches all orders from the backend via `actor.getAllOrders()`. Order status displayed on each `OrderCard` must come directly from the fetched backend data, not from local component state. The `useAllOrders` query must also automatically refetch every 15 seconds to stay current, and must invalidate and refetch after any `acceptOrder` or `updateOrderStatus` mutation completes.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-7"
-        ],
-        "quotes": [
-          "order status returning to accept order on courier menu",
-          "Courier App order status resets to 'Accept Order' on refresh — status not sourced from backend stable map on load"
-        ]
-      },
-      "acceptanceCriteria": [
-        "After a hard refresh of the Courier App, each order card displays the last known persisted status from the backend (e.g., 'preparing') rather than reverting to 'Accept Order'.",
-        "After the courier updates an order status, the updated status is reflected in the dashboard within one polling cycle (≤15 seconds) or immediately via query invalidation.",
-        "The actor is confirmed non-null before getAllOrders is called; loading and error states are handled gracefully."
+        "The order filter bar in the Courier App does not show 'Accepted', 'Preparing', or 'Out for Delivery' filter tabs.",
+        "Filter tabs present are: All, Pending, Delivered, and Cancelled.",
+        "Per-status counts in the filter bar reflect only the visible statuses."
       ]
     }
   ],
   "constraints": [
-    "Do not change the stable data model structure in a way that loses existing order or menu data — generate migration.mo if stable variable types change.",
-    "Do not modify files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui.",
-    "PIN-authenticated courier users must retain full unrestricted access to all Courier App operations — do not introduce new auth guards."
+    "Do not change the backend order status data model — 'delivered' must remain a valid status value.",
+    "Do not remove the Delete order functionality.",
+    "The PIN-based access gate (PIN: 1953) must remain intact and unchanged.",
+    "The Menu Management section must remain intact and unchanged."
   ],
   "nonGoals": [
-    "Real-time WebSocket or push-based order sync — polling is sufficient.",
-    "Changes to the menu management add/edit/delete/toggle flows (already fixed in prior releases).",
-    "Changes to the visual theme or color scheme.",
-    "Any new features or UI pages not mentioned in this request."
+    "Changing the Customer Portal in any way.",
+    "Removing or modifying the backend `updateOrderStatus` or `deleteOrder` functions.",
+    "Adding any new order statuses or workflow stages.",
+    "Modifying the backend Motoko actor."
   ],
   "imageRequirements": {
     "required": [],

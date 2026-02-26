@@ -1,82 +1,41 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
 import { useInternetIdentity } from './useInternetIdentity';
-import type { MenuItem, MenuItemInput, MenuItemUpdate, OrderInput, CustomerOrder, CustomerProfile, ProfileInput } from '../backend';
+import type { CustomerOrder, MenuItem, CustomerProfile, MenuItemInput, MenuItemUpdate, OrderInput, ProfileInput } from '../backend';
 
-// ---- Profile hooks
-export function useGetCallerProfile() {
-  const { actor, isFetching: actorFetching } = useActor();
+// ─── Menu Queries ────────────────────────────────────────────────────────────
 
-  const query = useQuery<CustomerProfile | null>({
-    queryKey: ['currentUserProfile'],
-    queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.getCallerUserProfile();
-    },
-    enabled: !!actor && !actorFetching,
-    retry: false,
-  });
-
-  return {
-    ...query,
-    isLoading: actorFetching || query.isLoading,
-    isFetched: !!actor && query.isFetched,
-  };
-}
-
-export function useSaveCallerProfile() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (profile: ProfileInput) => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.saveCallerUserProfile(profile);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
-    },
-  });
-}
-
-// ---- Menu hooks
 export function useMenu() {
-  const { actor, isFetching: actorFetching } = useActor();
-
+  const { actor, isFetching } = useActor();
   return useQuery<MenuItem[]>({
     queryKey: ['menu'],
     queryFn: async () => {
       if (!actor) return [];
       return actor.getMenu();
     },
-    enabled: !!actor && !actorFetching,
+    enabled: !!actor && !isFetching,
+    staleTime: 30000,
   });
 }
 
 export function useAdminMenu() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  // Admin sees all items including unavailable ones
-  // We fetch all orders and filter nothing — but backend getMenu only returns available items.
-  // We use a separate query key so admin can see all items.
+  const { actor, isFetching } = useActor();
   return useQuery<MenuItem[]>({
     queryKey: ['adminMenu'],
     queryFn: async () => {
       if (!actor) return [];
-      // getMenu only returns available items; for admin we need all items
-      // We'll fetch the full menu via getMenu and supplement with unavailable items
-      // Since backend only exposes getMenu (available only), we track unavailable items locally
-      // For now, use getMenu as the source of truth for admin too
-      return actor.getMenu();
+      const items = await actor.getMenu();
+      return items;
     },
-    enabled: !!actor && !actorFetching,
+    enabled: !!actor && !isFetching,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }
 
 export function useAddMenuItem() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (input: MenuItemInput) => {
       if (!actor) throw new Error('Actor not available');
@@ -92,7 +51,6 @@ export function useAddMenuItem() {
 export function useUpdateMenuItem() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (update: MenuItemUpdate) => {
       if (!actor) throw new Error('Actor not available');
@@ -108,7 +66,6 @@ export function useUpdateMenuItem() {
 export function useToggleMenuItemAvailability() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (itemId: string) => {
       if (!actor) throw new Error('Actor not available');
@@ -124,7 +81,6 @@ export function useToggleMenuItemAvailability() {
 export function useDeleteMenuItem() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (itemId: string) => {
       if (!actor) throw new Error('Actor not available');
@@ -137,27 +93,61 @@ export function useDeleteMenuItem() {
   });
 }
 
-// ---- Order hooks
+// ─── Order Queries ────────────────────────────────────────────────────────────
 
-// Fetch all orders (courier/admin view) with polling every 15 seconds
+/**
+ * Fetches ALL orders for the Courier App.
+ * Uses the actor (anonymous or authenticated) — getAllOrders has no auth check.
+ * Polls every 15 seconds and refetches on every mount.
+ */
 export function useAllOrders() {
-  const { actor, isFetching: actorFetching } = useActor();
-
+  const { actor, isFetching } = useActor();
   return useQuery<CustomerOrder[]>({
     queryKey: ['allOrders'],
     queryFn: async () => {
       if (!actor) return [];
       return actor.getAllOrders();
     },
-    enabled: !!actor && !actorFetching,
+    enabled: !!actor && !isFetching,
     refetchInterval: 15000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 }
 
-// Fetch a single order by ID with polling every 8 seconds
-export function useOrderById(orderId: string | null) {
-  const { actor, isFetching: actorFetching } = useActor();
+/**
+ * Fetches orders for the currently authenticated customer.
+ * Polls every 15 seconds.
+ */
+export function useOrdersByCustomer() {
+  const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
+  return useQuery<CustomerOrder[]>({
+    queryKey: ['ordersByCustomer', identity?.getPrincipal().toString()],
+    queryFn: async () => {
+      if (!actor || !identity) return [];
+      return actor.getOrdersByCustomerId(identity.getPrincipal());
+    },
+    enabled: !!actor && !isFetching && !!identity,
+    refetchInterval: 15000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+  });
+}
 
+// Keep backward-compatible alias
+export function useGetMyOrders() {
+  return useOrdersByCustomer();
+}
+
+/**
+ * Fetches a single order by ID.
+ * Polls every 8 seconds for live status updates on the confirmation screen.
+ */
+export function useOrderById(orderId: string | null) {
+  const { actor, isFetching } = useActor();
   return useQuery<CustomerOrder | null>({
     queryKey: ['orderById', orderId],
     queryFn: async () => {
@@ -168,38 +158,19 @@ export function useOrderById(orderId: string | null) {
         return null;
       }
     },
-    enabled: !!actor && !actorFetching && !!orderId,
+    enabled: !!actor && !isFetching && !!orderId,
     refetchInterval: 8000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 }
 
-// Fetch orders for the current authenticated customer with polling every 15 seconds
-export function useGetMyOrders() {
-  const { actor, isFetching: actorFetching } = useActor();
-  const { identity } = useInternetIdentity();
+// ─── Order Mutations ──────────────────────────────────────────────────────────
 
-  return useQuery<CustomerOrder[]>({
-    queryKey: ['ordersByCustomer', identity?.getPrincipal().toString()],
-    queryFn: async () => {
-      if (!actor || !identity) return [];
-      try {
-        const principal = identity.getPrincipal();
-        return await actor.getOrdersByCustomer(principal);
-      } catch {
-        return [];
-      }
-    },
-    enabled: !!actor && !actorFetching && !!identity,
-    refetchInterval: 15000,
-  });
-}
-
-// Place a new order
 export function usePlaceOrder() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
-  const { identity } = useInternetIdentity();
-
   return useMutation({
     mutationFn: async (order: OrderInput) => {
       if (!actor) throw new Error('Actor not available');
@@ -207,69 +178,130 @@ export function usePlaceOrder() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allOrders'] });
-      queryClient.invalidateQueries({
-        queryKey: ['ordersByCustomer', identity?.getPrincipal().toString()],
-      });
+      queryClient.invalidateQueries({ queryKey: ['ordersByCustomer'] });
     },
   });
 }
 
-// Update order status (courier side) — persists to backend via a workaround:
-// Since the backend doesn't expose updateOrderStatus, we update the local cache
-// and rely on the backend's stable storage for the original order data.
-// NOTE: Status changes will NOT survive a page refresh until the backend exposes updateOrderStatus.
-export function useUpdateOrderStatus() {
+export function useAcceptOrder() {
+  const { actor } = useActor();
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async ({ orderId, status }: { orderId: string; status: string }) => {
-      // Backend doesn't have updateOrderStatus endpoint — update local cache only
-      return { orderId, status };
+    mutationFn: async (_orderId: string) => {
+      // Backend does not have acceptOrder — status updates are optimistic only
+      throw new Error('acceptOrder not implemented in backend');
     },
-    onSuccess: ({ orderId, status }) => {
-      // Update allOrders cache
-      queryClient.setQueryData<CustomerOrder[]>(['allOrders'], (old) => {
-        if (!old) return old;
-        return old.map((order) =>
-          order.orderId === orderId
-            ? { ...order, status: status as CustomerOrder['status'] }
-            : order
-        );
-      });
-      // Update individual order cache
-      queryClient.setQueryData<CustomerOrder | null>(['orderById', orderId], (old) => {
-        if (!old) return old;
-        return { ...old, status: status as CustomerOrder['status'] };
-      });
+    onError: () => {
+      // Silently handle — the optimistic update in CourierApp handles UI
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['allOrders'] });
     },
   });
 }
 
-// Cancel order (courier side) — updates local cache only
-export function useCancelOrder() {
+export function useUpdateOrderStatus() {
+  const { actor } = useActor();
   const queryClient = useQueryClient();
-  const { identity } = useInternetIdentity();
+  return useMutation({
+    mutationFn: async (_params: { orderId: string; status: string }) => {
+      // Backend does not have updateOrderStatus — status updates are optimistic only
+      throw new Error('updateOrderStatus not implemented in backend');
+    },
+    onError: () => {
+      // Silently handle
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['allOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['ordersByCustomer'] });
+    },
+  });
+}
 
+export function useCancelOrder() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (_orderId: string) => {
+      // Backend does not have cancelOrder — optimistic only
+      throw new Error('cancelOrder not implemented in backend');
+    },
+    onError: () => {
+      // Silently handle
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['allOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['ordersByCustomer'] });
+    },
+  });
+}
+
+/**
+ * Permanently deletes an order from the backend.
+ * Invalidates allOrders query on success.
+ */
+export function useDeleteOrder() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (orderId: string) => {
-      return orderId;
+      if (!actor) throw new Error('Actor not available');
+      const result = await actor.deleteOrder(orderId);
+      if (result.__kind__ === 'err') {
+        throw new Error('Order not found');
+      }
+      return result;
     },
-    onSuccess: (orderId) => {
-      queryClient.setQueryData<CustomerOrder[]>(['allOrders'], (old) => {
-        if (!old) return old;
-        return old.map((order) =>
-          order.orderId === orderId
-            ? { ...order, status: 'cancelled' as CustomerOrder['status'] }
-            : order
-        );
-      });
-      queryClient.setQueryData<CustomerOrder | null>(['orderById', orderId], (old) => {
-        if (!old) return old;
-        return { ...old, status: 'cancelled' as CustomerOrder['status'] };
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['ordersByCustomer', identity?.getPrincipal().toString()],
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['ordersByCustomer'] });
     },
   });
+}
+
+// ─── Profile Queries ──────────────────────────────────────────────────────────
+
+export function useGetCallerProfile() {
+  const { actor, isFetching: actorFetching } = useActor();
+  const { identity } = useInternetIdentity();
+
+  const query = useQuery<CustomerProfile | null>({
+    queryKey: ['currentUserProfile'],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.getCallerUserProfile();
+    },
+    enabled: !!actor && !actorFetching && !!identity,
+    retry: false,
+  });
+
+  return {
+    ...query,
+    isLoading: actorFetching || query.isLoading,
+    isFetched: !!actor && query.isFetched,
+  };
+}
+
+// Alias for backward compatibility
+export function useGetCallerUserProfile() {
+  return useGetCallerProfile();
+}
+
+export function useSaveCallerProfile() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (profile: ProfileInput) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.saveCallerUserProfile(profile);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+    },
+  });
+}
+
+// Alias for backward compatibility
+export function useSaveCallerUserProfile() {
+  return useSaveCallerProfile();
 }

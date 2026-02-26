@@ -23,6 +23,13 @@ export interface MenuItem {
     category: string;
     price: number;
 }
+export type Result = {
+    __kind__: "ok";
+    ok: null;
+} | {
+    __kind__: "err";
+    err: Variant_notFound;
+};
 export interface MenuItemUpdate {
     itemId: string;
     name?: string;
@@ -66,17 +73,21 @@ export enum UserRole {
     user = "user",
     guest = "guest"
 }
+export enum Variant_notFound {
+    notFound = "notFound"
+}
 export interface backendInterface {
     addMenuItem(input: MenuItemInput): Promise<MenuItem>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     deleteMenuItem(itemId: string): Promise<void>;
+    deleteOrder(orderId: string): Promise<Result>;
     getAllOrders(): Promise<Array<CustomerOrder>>;
     getCallerUserProfile(): Promise<CustomerProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getMenu(): Promise<Array<MenuItem>>;
     getMenuByCategory(category: string): Promise<Array<MenuItem>>;
     getOrderById(orderId: string): Promise<CustomerOrder>;
-    getOrdersByCustomer(customerId: Principal): Promise<Array<CustomerOrder>>;
+    getOrdersByCustomerId(customerId: Principal): Promise<Array<CustomerOrder>>;
     getUserProfile(user: Principal): Promise<CustomerProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     placeOrder(order: OrderInput): Promise<void>;

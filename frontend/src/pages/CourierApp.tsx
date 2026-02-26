@@ -1,118 +1,114 @@
-import React, { useState } from 'react';
-import { Package, RefreshCw, Loader2 } from 'lucide-react';
-import { useAllOrders, useUpdateOrderStatus, useCancelOrder } from '../hooks/useQueries';
+import React, { useState, useCallback } from 'react';
+import { RefreshCw, Loader2, Package, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { CustomerOrder, OrderStatus } from '../backend';
+import { useAllOrders, useDeleteOrder } from '../hooks/useQueries';
+import { useQueryClient } from '@tanstack/react-query';
 import OrderCard from '../components/OrderCard';
 import OrderFilters from '../components/OrderFilters';
 import CourierPinGate from '../components/CourierPinGate';
-import MenuManagementSection from '../components/MenuManagementSection';
 import { useCourierAccess } from '../hooks/useCourierAccess';
-import { CustomerOrder, OrderStatus } from '../backend';
+import MenuManagementSection from '../components/MenuManagementSection';
 
-type Tab = 'orders' | 'menu';
+type FilterType = 'all' | 'pending' | 'delivered' | 'cancelled';
+
+// Optimistic local status overrides — keyed by orderId
+type LocalStatusMap = Record<string, OrderStatus>;
 
 export default function CourierApp() {
   const { hasAccess, grantAccess } = useCourierAccess();
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [activeTab, setActiveTab] = useState<Tab>('orders');
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [activeTab, setActiveTab] = useState<'orders' | 'menu'>('orders');
+  const [localStatuses, setLocalStatuses] = useState<LocalStatusMap>({});
+  const [deliveringOrderId, setDeliveringOrderId] = useState<string | null>(null);
+  const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
 
-  // Always fetch from backend on mount and poll every 15 seconds
-  const { data: orders = [], isLoading, isFetching, error, refetch } = useAllOrders();
-  const updateStatusMutation = useUpdateOrderStatus();
-  const cancelOrderMutation = useCancelOrder();
+  const queryClient = useQueryClient();
+  const { data: backendOrders = [], isLoading, isError, refetch, isFetching } = useAllOrders();
+  const deleteOrderMutation = useDeleteOrder();
+
+  // Merge backend orders with local optimistic overrides
+  const orders: CustomerOrder[] = backendOrders.map(order => ({
+    ...order,
+    status: localStatuses[order.orderId] ?? order.status,
+  }));
+
+  const handleRefresh = useCallback(() => {
+    setLocalStatuses({});
+    refetch();
+  }, [refetch]);
+
+  const handleDeliver = useCallback((orderId: string) => {
+    setDeliveringOrderId(orderId);
+    // Optimistic update — backend lacks updateOrderStatus
+    setLocalStatuses(prev => ({ ...prev, [orderId]: OrderStatus.delivered }));
+    setDeliveringOrderId(null);
+    queryClient.invalidateQueries({ queryKey: ['allOrders'] });
+  }, [queryClient]);
+
+  const handleDelete = useCallback((orderId: string) => {
+    setDeletingOrderId(orderId);
+    deleteOrderMutation.mutate(orderId, {
+      onSettled: () => {
+        setDeletingOrderId(null);
+      },
+    });
+  }, [deleteOrderMutation]);
+
+  const filteredOrders = orders.filter(order => {
+    if (activeFilter === 'all') return true;
+    return order.status === activeFilter;
+  });
+
+  const counts = {
+    pending: orders.filter(o => o.status === OrderStatus.pending).length,
+    delivered: orders.filter(o => o.status === OrderStatus.delivered).length,
+    cancelled: orders.filter(o => o.status === OrderStatus.cancelled).length,
+  };
 
   if (!hasAccess) {
     return <CourierPinGate onAccess={grantAccess} />;
   }
 
-  const filteredOrders = activeFilter === 'all'
-    ? orders
-    : orders.filter((o) => o.status === activeFilter);
-
-  // Sort: active orders first, then by timestamp descending
-  const sortedOrders = [...filteredOrders].sort((a, b) => {
-    const activeStatuses: string[] = [
-      OrderStatus.pending,
-      OrderStatus.accepted,
-      OrderStatus.preparing,
-      OrderStatus.out_for_delivery,
-    ];
-    const aActive = activeStatuses.includes(a.status as string);
-    const bActive = activeStatuses.includes(b.status as string);
-    if (aActive && !bActive) return -1;
-    if (!aActive && bActive) return 1;
-    return Number(b.timestamp) - Number(a.timestamp);
-  });
-
-  const pendingCount = orders.filter((o) => o.status === OrderStatus.pending).length;
-  const activeCount = orders.filter((o) =>
-    ([OrderStatus.accepted, OrderStatus.preparing, OrderStatus.out_for_delivery] as string[]).includes(o.status as string)
-  ).length;
-
-  const year = new Date().getFullYear();
-  const appId = encodeURIComponent(
-    typeof window !== 'undefined' ? window.location.hostname : 'the-deccan-bhojan'
-  );
-
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-orange-500 sticky top-0 z-40 shadow-orange">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+      <header className="bg-white border-b border-orange-100 sticky top-0 z-30 shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img
-              src="/assets/generated/courier-icon.dim_128x128.png"
-              alt="Courier"
-              className="h-9 w-9 rounded-xl object-cover"
-            />
+            <img src="/assets/generated/courier-icon.dim_128x128.png" alt="Courier" className="w-8 h-8 rounded-lg" />
             <div>
-              <h1 className="font-display font-bold text-white text-lg leading-tight">
-                Courier Dashboard
-              </h1>
-              <p className="text-orange-100 text-xs">The Deccan BHOJAN</p>
+              <h1 className="font-display font-bold text-gray-900 text-lg leading-tight">Courier Dashboard</h1>
+              <p className="text-xs text-gray-500">The Deccan BHOJAN</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            {pendingCount > 0 && (
-              <span className="bg-white text-orange-500 text-xs font-bold px-2.5 py-1 rounded-full">
-                {pendingCount} new
-              </span>
-            )}
-            <button
-              onClick={() => refetch()}
-              disabled={isFetching}
-              className="p-2 rounded-full bg-orange-400 hover:bg-orange-600 transition-colors disabled:opacity-50"
-              title="Refresh orders"
-            >
-              <RefreshCw className={`h-4 w-4 text-white ${isFetching ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={isFetching}
+            className="flex items-center gap-1.5 text-sm text-orange-500 hover:text-orange-600 font-medium disabled:opacity-50 transition-colors"
+          >
+            <RefreshCw size={15} className={isFetching ? 'animate-spin' : ''} />
+            Refresh
+          </button>
         </div>
 
         {/* Tabs */}
-        <div className="max-w-5xl mx-auto px-4 pb-0 flex gap-1">
+        <div className="max-w-4xl mx-auto px-4 flex gap-1 pb-0">
           <button
             onClick={() => setActiveTab('orders')}
-            className={`px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-colors ${
+            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
               activeTab === 'orders'
-                ? 'bg-white text-orange-500'
-                : 'text-orange-100 hover:text-white'
+                ? 'border-orange-500 text-orange-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
             Orders
-            {activeCount > 0 && (
-              <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
-                activeTab === 'orders' ? 'bg-orange-100 text-orange-600' : 'bg-orange-400 text-white'
-              }`}>
-                {activeCount}
-              </span>
-            )}
           </button>
           <button
             onClick={() => setActiveTab('menu')}
-            className={`px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-colors ${
+            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
               activeTab === 'menu'
-                ? 'bg-white text-orange-500'
-                : 'text-orange-100 hover:text-white'
+                ? 'border-orange-500 text-orange-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
             Menu Management
@@ -120,109 +116,83 @@ export default function CourierApp() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6">
-        {activeTab === 'orders' && (
+      <main className="max-w-4xl mx-auto px-4 py-6">
+        {activeTab === 'menu' ? (
+          <MenuManagementSection />
+        ) : (
           <>
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="bg-white rounded-2xl shadow-card p-4 text-center">
-                <p className="text-2xl font-display font-bold text-orange-500">{orders.length}</p>
-                <p className="text-xs text-gray-500 mt-1">Total Orders</p>
-              </div>
-              <div className="bg-white rounded-2xl shadow-card p-4 text-center">
-                <p className="text-2xl font-display font-bold text-yellow-500">{pendingCount}</p>
-                <p className="text-xs text-gray-500 mt-1">Pending</p>
-              </div>
-              <div className="bg-white rounded-2xl shadow-card p-4 text-center">
-                <p className="text-2xl font-display font-bold text-green-500">{activeCount}</p>
-                <p className="text-xs text-gray-500 mt-1">Active</p>
-              </div>
+            {/* Stats Row */}
+            <div className="grid grid-cols-3 gap-2 mb-5">
+              {[
+                { label: 'Pending', count: counts.pending, icon: <Clock size={14} />, color: 'text-yellow-600 bg-yellow-50' },
+                { label: 'Delivered', count: counts.delivered, icon: <CheckCircle size={14} />, color: 'text-green-600 bg-green-50' },
+                { label: 'Cancelled', count: counts.cancelled, icon: <AlertCircle size={14} />, color: 'text-red-600 bg-red-50' },
+              ].map(stat => (
+                <div key={stat.label} className={`rounded-xl p-2 text-center ${stat.color}`}>
+                  <div className="flex items-center justify-center gap-1 mb-0.5">{stat.icon}</div>
+                  <div className="font-display font-bold text-lg leading-tight">{stat.count}</div>
+                  <div className="text-xs font-medium opacity-80">{stat.label}</div>
+                </div>
+              ))}
             </div>
 
-            {/* Filters — uses the existing OrderFilters component interface */}
+            {/* Filters */}
             <OrderFilters
               activeFilter={activeFilter}
-              onFilterChange={setActiveFilter}
+              onFilterChange={(f) => setActiveFilter(f as FilterType)}
               orders={orders}
             />
 
             {/* Orders List */}
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <Loader2 className="h-10 w-10 animate-spin text-orange-500" />
-                <p className="mt-4 text-gray-500">Loading orders...</p>
-              </div>
-            ) : error ? (
-              <div className="text-center py-16">
-                <p className="text-red-400 mb-4">Failed to load orders.</p>
-                <button
-                  onClick={() => refetch()}
-                  className="px-4 py-2 bg-orange-500 text-white rounded-full text-sm hover:bg-orange-600 transition-colors"
-                >
-                  Try Again
-                </button>
-              </div>
-            ) : sortedOrders.length === 0 ? (
-              <div className="text-center py-16">
-                <Package className="h-12 w-12 text-orange-200 mx-auto mb-4" />
-                <h3 className="text-lg font-display font-semibold text-gray-600 mb-2">
-                  {activeFilter === 'all' ? 'No Orders Yet' : `No ${activeFilter} orders`}
-                </h3>
-                <p className="text-gray-400">
-                  {activeFilter === 'all'
-                    ? 'Orders will appear here when customers place them.'
-                    : 'Try a different filter to see other orders.'}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4 mt-4">
-                {sortedOrders.map((order: CustomerOrder) => (
-                  <OrderCard
-                    key={order.orderId}
-                    order={order}
-                    onUpdateStatus={(orderId, status) =>
-                      updateStatusMutation.mutate({ orderId, status })
-                    }
-                    onCancelOrder={(orderId) => cancelOrderMutation.mutate(orderId)}
-                    isUpdating={
-                      (updateStatusMutation.isPending &&
-                        (updateStatusMutation.variables as { orderId: string } | undefined)?.orderId === order.orderId) ||
-                      (cancelOrderMutation.isPending &&
-                        cancelOrderMutation.variables === order.orderId)
-                    }
-                  />
-                ))}
-              </div>
-            )}
+            <div className="mt-4 space-y-4">
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                  <Loader2 size={32} className="animate-spin mb-3 text-orange-400" />
+                  <p className="text-sm font-medium">Loading orders…</p>
+                </div>
+              ) : isError ? (
+                <div className="flex flex-col items-center justify-center py-16 text-red-400">
+                  <AlertCircle size={32} className="mb-3" />
+                  <p className="text-sm font-medium">Failed to load orders</p>
+                  <button
+                    onClick={handleRefresh}
+                    className="mt-3 text-sm text-orange-500 hover:text-orange-600 font-medium underline"
+                  >
+                    Try again
+                  </button>
+                </div>
+              ) : filteredOrders.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                  <Package size={40} className="mb-3 opacity-40" />
+                  <p className="text-sm font-medium">
+                    {activeFilter === 'all' ? 'No orders yet' : `No ${activeFilter} orders`}
+                  </p>
+                </div>
+              ) : (
+                filteredOrders
+                  .slice()
+                  .sort((a, b) => Number(b.timestamp) - Number(a.timestamp))
+                  .map(order => (
+                    <OrderCard
+                      key={order.orderId}
+                      order={order}
+                      onDeliver={handleDeliver}
+                      onDelete={handleDelete}
+                      isDelivering={deliveringOrderId === order.orderId}
+                      isDeleting={deletingOrderId === order.orderId}
+                    />
+                  ))
+              )}
+            </div>
 
             {orders.length > 0 && (
-              <p className="text-center text-xs text-gray-300 mt-6">
+              <p className="text-center text-xs text-gray-400 mt-6">
                 Orders refresh automatically every 15 seconds
               </p>
             )}
           </>
         )}
-
-        {activeTab === 'menu' && <MenuManagementSection />}
       </main>
-
-      {/* Footer */}
-      <footer className="bg-white border-t border-orange-100 py-5 mt-auto">
-        <div className="max-w-5xl mx-auto px-4 text-center">
-          <p className="text-sm text-gray-500">© {year} The Deccan BHOJAN. All rights reserved.</p>
-          <p className="text-xs text-gray-400 mt-1">
-            Built with ❤️ using{' '}
-            <a
-              href={`https://caffeine.ai/?utm_source=Caffeine-footer&utm_medium=referral&utm_content=${appId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-orange-500 hover:text-orange-600 underline"
-            >
-              caffeine.ai
-            </a>
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }

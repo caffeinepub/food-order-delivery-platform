@@ -1,111 +1,181 @@
-import React from 'react';
-import { Clock, ChefHat, Truck, Package, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle, ChevronDown, ChevronUp, Loader2, Trash2 } from 'lucide-react';
 import { CustomerOrder, OrderStatus } from '../backend';
 import OrderStatusBadge from './OrderStatusBadge';
 
 interface OrderCardProps {
   order: CustomerOrder;
-  onUpdateStatus: (orderId: string, status: string) => void;
-  onCancelOrder: (orderId: string) => void;
-  isUpdating?: boolean;
+  onDeliver?: (orderId: string) => void;
+  onDelete?: (orderId: string) => void;
+  isDelivering?: boolean;
+  isDeleting?: boolean;
 }
 
-const NEXT_STATUS: Record<string, { label: string; value: string; icon: React.ElementType } | null> = {
-  [OrderStatus.pending]: { label: 'Accept Order', value: OrderStatus.accepted, icon: CheckCircle },
-  [OrderStatus.accepted]: { label: 'Start Preparing', value: OrderStatus.preparing, icon: ChefHat },
-  [OrderStatus.preparing]: { label: 'Out for Delivery', value: OrderStatus.out_for_delivery, icon: Truck },
-  [OrderStatus.out_for_delivery]: { label: 'Mark Delivered', value: OrderStatus.delivered, icon: Package },
-  [OrderStatus.delivered]: null,
-  [OrderStatus.cancelled]: null,
-};
+export default function OrderCard({ order, onDeliver, onDelete, isDelivering, isDeleting }: OrderCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-function formatDate(timestamp: bigint): string {
-  const ms = Number(timestamp) / 1_000_000;
-  return new Date(ms).toLocaleString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+  const currentStatus = order.status;
+  const isBusy = isDelivering || isDeleting;
+  const isActionable = currentStatus !== OrderStatus.delivered && currentStatus !== OrderStatus.cancelled;
 
-export default function OrderCard({ order, onUpdateStatus, onCancelOrder, isUpdating = false }: OrderCardProps) {
-  // Status is always sourced from the order prop (which comes from backend data)
-  const currentStatus = order.status as OrderStatus;
-  const nextAction = NEXT_STATUS[currentStatus] ?? null;
-  const canCancel = currentStatus !== OrderStatus.delivered && currentStatus !== OrderStatus.cancelled;
+  const handleDeliver = () => {
+    if (onDeliver) {
+      onDeliver(order.orderId);
+    }
+  };
+
+  const handleDeleteClick = () => {
+    setConfirmingDelete(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    setConfirmingDelete(false);
+    if (onDelete) {
+      onDelete(order.orderId);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setConfirmingDelete(false);
+  };
+
+  const formatTime = (timestamp: bigint) => {
+    const date = new Date(Number(timestamp) / 1_000_000);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatDate = (timestamp: bigint) => {
+    const date = new Date(Number(timestamp) / 1_000_000);
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
 
   return (
-    <div className="bg-white rounded-2xl shadow-card overflow-hidden border border-gray-50">
-      {/* Card Header */}
-      <div className="bg-orange-50 px-5 py-3 flex items-center justify-between">
+    <div className="bg-white rounded-2xl shadow-card border border-orange-100 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-orange-50 border-b border-orange-100">
         <div>
-          <p className="font-body font-semibold text-gray-800 text-sm">
-            Order #{order.orderId.slice(-8)}
-          </p>
-          <p className="font-body text-xs text-gray-400 mt-0.5">
-            {formatDate(order.timestamp)}
-          </p>
+          <span className="font-display font-semibold text-gray-900 text-sm">
+            #{order.orderId.slice(-8).toUpperCase()}
+          </span>
+          <span className="ml-2 text-xs text-gray-500">
+            {formatDate(order.timestamp)} · {formatTime(order.timestamp)}
+          </span>
         </div>
         <OrderStatusBadge status={currentStatus} />
       </div>
 
-      {/* Order Items */}
-      <div className="px-5 py-4">
-        <div className="space-y-1.5 mb-4">
-          {order.items.map((item, index) => (
-            <div key={index} className="flex justify-between items-center">
-              <span className="font-body text-sm text-gray-700">
-                {item.itemName}
-                <span className="text-gray-400 ml-1">× {Number(item.quantity)}</span>
-              </span>
-              <span className="font-body text-sm font-medium text-gray-700">
-                ₹{(item.price * Number(item.quantity)).toFixed(2)}
-              </span>
+      {/* Customer & Total */}
+      <div className="px-4 py-3 flex items-center justify-between">
+        <div className="text-sm text-gray-600">
+          <span className="font-medium text-gray-800">
+            {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+        <div className="font-display font-bold text-orange-500 text-lg">
+          ₹{order.totalPrice.toFixed(2)}
+        </div>
+      </div>
+
+      {/* Expandable Items */}
+      <button
+        onClick={() => setExpanded(e => !e)}
+        className="w-full px-4 pb-2 flex items-center gap-1 text-xs text-orange-500 font-medium hover:text-orange-600 transition-colors"
+      >
+        {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        {expanded ? 'Hide items' : 'Show items'}
+      </button>
+
+      {expanded && (
+        <div className="px-4 pb-3 space-y-1">
+          {order.items.map((item, idx) => (
+            <div key={idx} className="flex justify-between text-sm text-gray-700">
+              <span>{item.itemName} × {Number(item.quantity)}</span>
+              <span className="text-gray-500">₹{(item.price * Number(item.quantity)).toFixed(2)}</span>
             </div>
           ))}
         </div>
+      )}
 
-        <div className="flex justify-between items-center pt-3 border-t border-gray-100 mb-4">
-          <span className="font-body font-bold text-gray-800 text-sm">Total</span>
-          <span className="font-display font-bold text-orange-500">
-            ₹{order.totalPrice.toFixed(2)}
-          </span>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          {nextAction && (
+      {/* Delete Confirmation Banner */}
+      {confirmingDelete && (
+        <div className="mx-4 mb-3 p-3 bg-orange-50 border border-orange-300 rounded-xl">
+          <p className="text-sm font-medium text-gray-800 mb-2">
+            Permanently delete this order?
+          </p>
+          <div className="flex gap-2">
             <button
-              onClick={() => onUpdateStatus(order.orderId, nextAction.value)}
-              disabled={isUpdating}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 text-white rounded-xl font-body font-semibold text-sm hover:bg-orange-600 transition-colors disabled:opacity-50"
+              onClick={handleDeleteConfirm}
+              disabled={isBusy}
+              className="flex-1 flex items-center justify-center gap-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold text-sm py-1.5 px-3 rounded-lg transition-colors"
             >
-              {isUpdating ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <nextAction.icon className="h-4 w-4" />
-              )}
-              {isUpdating ? 'Updating...' : nextAction.label}
+              {isDeleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+              Yes, Delete
             </button>
-          )}
-
-          {canCancel && (
             <button
-              onClick={() => onCancelOrder(order.orderId)}
-              disabled={isUpdating}
-              className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-red-50 text-red-500 border border-red-100 rounded-xl font-body font-semibold text-sm hover:bg-red-100 transition-colors disabled:opacity-50"
+              onClick={handleDeleteCancel}
+              disabled={isBusy}
+              className="flex-1 border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-60 font-medium text-sm py-1.5 px-3 rounded-lg transition-colors"
             >
-              {isUpdating ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <XCircle className="h-4 w-4" />
-              )}
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Actions for active orders */}
+      {isActionable && (
+        <div className="px-4 pb-4 flex gap-2">
+          {/* Deliver Button */}
+          <button
+            onClick={handleDeliver}
+            disabled={isBusy}
+            className="flex-1 flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold text-sm py-2 px-3 rounded-xl transition-colors"
+          >
+            {isDelivering ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <CheckCircle size={14} />
+            )}
+            Deliver
+          </button>
+
+          {/* Delete Button */}
+          {!confirmingDelete && (
+            <button
+              onClick={handleDeleteClick}
+              disabled={isBusy}
+              className="flex items-center justify-center gap-1.5 border border-orange-300 text-orange-500 hover:bg-orange-50 disabled:opacity-60 font-medium text-sm py-2 px-3 rounded-xl transition-colors"
+            >
+              {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+              Delete
+            </button>
           )}
         </div>
-      </div>
+      )}
+
+      {/* Completed / Cancelled state */}
+      {!isActionable && (
+        <div className="px-4 pb-4 space-y-2">
+          <div className={`text-center text-sm font-medium py-2 rounded-xl ${
+            currentStatus === OrderStatus.delivered
+              ? 'bg-green-50 text-green-600'
+              : 'bg-red-50 text-red-500'
+          }`}>
+            {currentStatus === OrderStatus.delivered ? '✓ Order Delivered' : '✗ Order Cancelled'}
+          </div>
+          {!confirmingDelete && (
+            <button
+              onClick={handleDeleteClick}
+              disabled={isBusy}
+              className="w-full flex items-center justify-center gap-1.5 border border-orange-300 text-orange-500 hover:bg-orange-50 disabled:opacity-60 font-medium text-sm py-2 px-3 rounded-xl transition-colors"
+            >
+              {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+              Delete Order
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,15 +1,14 @@
 # Specification
 
 ## Summary
-**Goal:** Fix order persistence and status synchronization bugs across the backend, Customer Portal, and Courier App for The Deccan BHOJAN.
+**Goal:** Simplify the Courier App order workflow by removing all intermediate status stages, leaving only "Deliver" and "Delete" actions on each order card, and trimming the filter bar to match.
 
 **Planned changes:**
-- Refactor the backend `placeOrder` function to store all orders in a single canonical stable map keyed by `orderId`, independent of the caller's principal.
-- Fix `getAllOrders` to return every entry from the unified orders map with no per-caller filtering.
-- Fix `getOrdersByCustomer` to query the same canonical map filtered only by the stored `customerId` field.
-- Update the Customer Portal to re-fetch orders from the backend via `getOrdersByCustomer` on mount and navigation, making backend data the authoritative source instead of transient React or sessionStorage state.
-- Fix the `OrderConfirmation` component to poll `getOrderById` every 8 seconds and display the live backend status in the progress stepper, including on hard refresh.
-- Fix the `MyOrdersView` component and `useOrdersByCustomer` hook to poll for updated statuses every 15 seconds and invalidate/refetch after any order mutation.
-- Fix the Courier App dashboard to re-fetch all orders via `getAllOrders` on every mount, source order status from backend data, poll every 15 seconds, and invalidate after `acceptOrder` or `updateOrderStatus` mutations.
+- Remove "Accept", "Preparing", and "Out for Delivery" action buttons from each order card in `OrderCard.tsx` and `CourierApp.tsx`
+- Add a **Deliver** button to each order card that calls `updateOrderStatus` to set the status directly to `delivered`
+- Add a **Delete** button to each order card that shows a confirmation prompt before calling `useDeleteOrder`
+- Style both buttons using the app's white and orange (#F97316) theme
+- Remove `accepted`, `preparing`, and `out_for_delivery` filter tabs from `OrderFilters.tsx`
+- Keep only "All", "Pending", "Delivered", and "Cancelled" filter tabs, with accurate per-status counts
 
-**User-visible outcome:** Orders placed by customers persist across page refreshes on both the Customer Portal and Courier App. Status updates made by the courier are reflected on the Customer Portal within 15 seconds without a manual reload, and the Courier App no longer resets order statuses to "Accept Order" after a refresh.
+**User-visible outcome:** Each order card in the Courier App shows exactly two action buttons (Deliver and Delete), and the filter bar only displays tabs for All, Pending, Delivered, and Cancelled statuses.

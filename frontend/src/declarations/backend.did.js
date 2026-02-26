@@ -27,6 +27,10 @@ export const UserRole = IDL.Variant({
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
+export const Result = IDL.Variant({
+  'ok' : IDL.Null,
+  'err' : IDL.Variant({ 'notFound' : IDL.Null }),
+});
 export const OrderStatus = IDL.Variant({
   'preparing' : IDL.Null,
   'cancelled' : IDL.Null,
@@ -73,13 +77,14 @@ export const idlService = IDL.Service({
   'addMenuItem' : IDL.Func([MenuItemInput], [MenuItem], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'deleteMenuItem' : IDL.Func([IDL.Text], [], []),
+  'deleteOrder' : IDL.Func([IDL.Text], [Result], []),
   'getAllOrders' : IDL.Func([], [IDL.Vec(CustomerOrder)], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(CustomerProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getMenu' : IDL.Func([], [IDL.Vec(MenuItem)], ['query']),
   'getMenuByCategory' : IDL.Func([IDL.Text], [IDL.Vec(MenuItem)], ['query']),
   'getOrderById' : IDL.Func([IDL.Text], [CustomerOrder], ['query']),
-  'getOrdersByCustomer' : IDL.Func(
+  'getOrdersByCustomerId' : IDL.Func(
       [IDL.Principal],
       [IDL.Vec(CustomerOrder)],
       ['query'],
@@ -117,6 +122,10 @@ export const idlFactory = ({ IDL }) => {
     'admin' : IDL.Null,
     'user' : IDL.Null,
     'guest' : IDL.Null,
+  });
+  const Result = IDL.Variant({
+    'ok' : IDL.Null,
+    'err' : IDL.Variant({ 'notFound' : IDL.Null }),
   });
   const OrderStatus = IDL.Variant({
     'preparing' : IDL.Null,
@@ -158,6 +167,7 @@ export const idlFactory = ({ IDL }) => {
     'addMenuItem' : IDL.Func([MenuItemInput], [MenuItem], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'deleteMenuItem' : IDL.Func([IDL.Text], [], []),
+    'deleteOrder' : IDL.Func([IDL.Text], [Result], []),
     'getAllOrders' : IDL.Func([], [IDL.Vec(CustomerOrder)], ['query']),
     'getCallerUserProfile' : IDL.Func(
         [],
@@ -168,7 +178,7 @@ export const idlFactory = ({ IDL }) => {
     'getMenu' : IDL.Func([], [IDL.Vec(MenuItem)], ['query']),
     'getMenuByCategory' : IDL.Func([IDL.Text], [IDL.Vec(MenuItem)], ['query']),
     'getOrderById' : IDL.Func([IDL.Text], [CustomerOrder], ['query']),
-    'getOrdersByCustomer' : IDL.Func(
+    'getOrdersByCustomerId' : IDL.Func(
         [IDL.Principal],
         [IDL.Vec(CustomerOrder)],
         ['query'],

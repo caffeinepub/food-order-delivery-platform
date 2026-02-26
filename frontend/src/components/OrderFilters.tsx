@@ -10,9 +10,6 @@ interface OrderFiltersProps {
 const filterOptions = [
   { value: 'all', label: 'All Orders' },
   { value: OrderStatus.pending, label: 'Pending' },
-  { value: OrderStatus.accepted, label: 'Accepted' },
-  { value: OrderStatus.preparing, label: 'Preparing' },
-  { value: OrderStatus.out_for_delivery, label: 'Out for Delivery' },
   { value: OrderStatus.delivered, label: 'Delivered' },
   { value: OrderStatus.cancelled, label: 'Cancelled' },
 ];

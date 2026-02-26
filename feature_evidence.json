@@ -2,71 +2,10 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-fix-the-customer-portal-frontend-src-pages-customerportal-tsx-and-frontend-src-hooks-usequeries-ts-so-that-the-active-recent-order-state-is-never-held-exclusively-in-transient-react-component-state-on-mount-and-on-navigation-to-the-menu-or-order-confirmation-view-the-portal-must-re-fetch-the-user-s-latest-orders-from-the-backend-via-getordersbycustomer-the-useordersbycustomer-hook-must-be-enabled-whenever-the-actor-and-identity-are-available-and-its-result-must-be-the-authoritative-source-of-order-data-not-sessionstorage-or-in-memory-state-alone",
-      "featureTitle": "Fix the Customer Portal (`frontend/src/pages/CustomerPortal.tsx` and `frontend/src/hooks/useQueries.ts`) so that the active/recent order state is never held exclusively in transient React component state. On mount and on navigation to the Menu or Order Confirmation view, the portal must re-fetch the user's latest orders from the backend via `getOrdersByCustomer`. The `useOrdersByCustomer` hook must be enabled whenever the actor and identity are available, and its result must be the authoritative source of order data — not sessionStorage or in-memory state alone.",
-      "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/CustomerPortal.tsx"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "authorization@4.0.0"
-      ],
-      "testIds": [
-        "REQ-34"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-fix-the-orderconfirmation-component-frontend-src-components-orderconfirmation-tsx-to-poll-getorderbyid-or-equivalent-for-the-specific-order-s-latest-status-every-8-seconds-the-status-displayed-in-the-progress-stepper-must-always-reflect-the-value-returned-from-the-backend-not-local-component-state-set-at-order-placement-time-on-remount-e-g-after-a-page-refresh-the-component-must-accept-the-orderid-prop-and-immediately-fetch-the-current-status-from-the-backend-before-rendering",
-      "featureTitle": "Fix the `OrderConfirmation` component (`frontend/src/components/OrderConfirmation.tsx`) to poll `getOrderById` (or equivalent) for the specific order's latest status every 8 seconds. The status displayed in the progress stepper must always reflect the value returned from the backend, not local component state set at order placement time. On remount (e.g., after a page refresh), the component must accept the `orderId` prop and immediately fetch the current status from the backend before rendering.",
-      "files": [
-        "frontend/src/components/OrderConfirmation.tsx",
-        "frontend/src/hooks/useQueries.ts"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "authorization@4.0.0"
-      ],
-      "testIds": [
-        "REQ-35"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-fix-the-myordersview-component-frontend-src-components-myordersview-tsx-and-its-underlying-useordersbycustomer-hook-in-frontend-src-hooks-usequeries-ts-to-poll-for-updated-order-statuses-the-query-must-refetch-at-least-every-15-seconds-when-the-view-is-active-and-must-also-refetch-immediately-after-any-order-related-mutation-place-order-cancel-order-status-badges-displayed-in-the-order-history-list-must-reflect-the-latest-value-from-the-backend",
-      "featureTitle": "Fix the `MyOrdersView` component (`frontend/src/components/MyOrdersView.tsx`) and its underlying `useOrdersByCustomer` hook in `frontend/src/hooks/useQueries.ts` to poll for updated order statuses. The query must refetch at least every 15 seconds when the view is active, and must also refetch immediately after any order-related mutation (place order, cancel order). Status badges displayed in the order history list must reflect the latest value from the backend.",
-      "files": [
-        "frontend/src/components/MyOrdersView.tsx",
-        "frontend/src/hooks/useQueries.ts"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "authorization@4.0.0"
-      ],
-      "testIds": [
-        "REQ-36"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-fix-the-courier-app-dashboard-frontend-src-pages-courierapp-tsx-and-frontend-src-hooks-usequeries-ts-so-that-on-every-mount-including-after-a-hard-page-refresh-it-re-fetches-all-orders-from-the-backend-via-actor-getallorders-order-status-displayed-on-each-ordercard-must-come-directly-from-the-fetched-backend-data-not-from-local-component-state-the-useallorders-query-must-also-automatically-refetch-every-15-seconds-to-stay-current-and-must-invalidate-and-refetch-after-any-acceptorder-or-updateorderstatus-mutation-completes",
-      "featureTitle": "Fix the Courier App dashboard (`frontend/src/pages/CourierApp.tsx` and `frontend/src/hooks/useQueries.ts`) so that on every mount (including after a hard page refresh) it re-fetches all orders from the backend via `actor.getAllOrders()`. Order status displayed on each `OrderCard` must come directly from the fetched backend data, not from local component state. The `useAllOrders` query must also automatically refetch every 15 seconds to stay current, and must invalidate and refetch after any `acceptOrder` or `updateOrderStatus` mutation completes.",
+      "featureId": "feature-in-frontend-src-components-ordercard-tsx-and-frontend-src-pages-courierapp-tsx-remove-all-intermediate-status-action-buttons-accept-preparing-out-for-delivery-from-each-order-card-each-order-card-must-display-exactly-two-action-buttons-1-deliver-calls-updateorderstatus-to-set-the-order-status-directly-to-delivered-and-2-delete-shows-a-confirmation-prompt-then-calls-usedeleteorder-no-other-status-advancement-controls-should-be-present",
+      "featureTitle": "In `frontend/src/components/OrderCard.tsx` and `frontend/src/pages/CourierApp.tsx`, remove all intermediate status action buttons (Accept, Preparing, Out for Delivery) from each order card. Each order card must display exactly two action buttons: (1) **Deliver** — calls `updateOrderStatus` to set the order status directly to `delivered`, and (2) **Delete** — shows a confirmation prompt then calls `useDeleteOrder`. No other status-advancement controls should be present.",
       "files": [
         "frontend/src/components/OrderCard.tsx",
-        "frontend/src/hooks/useQueries.ts",
         "frontend/src/pages/CourierApp.tsx"
       ],
       "components": [
@@ -78,7 +17,26 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-37"
+        "REQ-56"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-in-frontend-src-components-orderfilters-tsx-remove-filter-tabs-for-accepted-preparing-and-out-for-delivery-statuses-the-filter-bar-must-only-show-tabs-relevant-to-the-simplified-workflow-pending-delivered-and-cancelled-plus-an-all-option",
+      "featureTitle": "In `frontend/src/components/OrderFilters.tsx`, remove filter tabs for `accepted`, `preparing`, and `out_for_delivery` statuses. The filter bar must only show tabs relevant to the simplified workflow: `pending`, `delivered`, and `cancelled` (plus an 'All' option).",
+      "files": [
+        "frontend/src/components/OrderFilters.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-57"
       ],
       "confidence": "high"
     }

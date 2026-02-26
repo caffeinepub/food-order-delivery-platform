@@ -1,94 +1,49 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-26T09:47:41.706Z",
+  "generatedAt": "2026-02-26T10:52:01.767Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 5,
-    "implemented": 4,
+    "total": 2,
+    "implemented": 2,
     "items": [
       {
-        "id": "REQ-33",
-        "summary": "Audit and fix the backend `placeOrder` function in `backend/main.mo` to ensure every placed order is stored in a single canonical stable map keyed by `orderId`, independent of the caller's principal. Fix `getAllOrders` to return all entries from this single map without any per-caller or per-customer filtering. Fix `getOrdersByCustomer` to query from the same canonical map filtered only by the stored `customerId` field. If orders are currently stored in any per-caller or per-customer scoped structure that is not fully traversed by `getAllOrders`, refactor both functions to use the one unified stable orders map.",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
-      },
-      {
-        "id": "REQ-34",
-        "summary": "Fix the Customer Portal (`frontend/src/pages/CustomerPortal.tsx` and `frontend/src/hooks/useQueries.ts`) so that the active/recent order state is never held exclusively in transient React component state. On mount and on navigation to the Menu or Order Confirmation view, the portal must re-fetch the user's latest orders from the backend via `getOrdersByCustomer`. The `useOrdersByCustomer` hook must be enabled whenever the actor and identity are available, and its result must be the authoritative source of order data — not sessionStorage or in-memory state alone.",
+        "id": "REQ-56",
+        "summary": "In `frontend/src/components/OrderCard.tsx` and `frontend/src/pages/CourierApp.tsx`, remove all intermediate status action buttons (Accept, Preparing, Out for Delivery) from each order card. Each order card must display exactly two action buttons: (1) **Deliver** — calls `updateOrderStatus` to set the order status directly to `delivered`, and (2) **Delete** — shows a confirmation prompt then calls `useDeleteOrder`. No other status-advancement controls should be present.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/CustomerPortal.tsx",
-          "frontend/src/hooks/useQueries.ts"
+          "frontend/src/components/OrderCard.tsx",
+          "frontend/src/pages/CourierApp.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/pages/CustomerPortal.tsx",
-          "frontend/src/hooks/useQueries.ts"
+          "frontend/src/components/OrderCard.tsx",
+          "frontend/src/pages/CourierApp.tsx"
         ]
       },
       {
-        "id": "REQ-35",
-        "summary": "Fix the `OrderConfirmation` component (`frontend/src/components/OrderConfirmation.tsx`) to poll `getOrderById` (or equivalent) for the specific order's latest status every 8 seconds. The status displayed in the progress stepper must always reflect the value returned from the backend, not local component state set at order placement time. On remount (e.g., after a page refresh), the component must accept the `orderId` prop and immediately fetch the current status from the backend before rendering.",
+        "id": "REQ-57",
+        "summary": "In `frontend/src/components/OrderFilters.tsx`, remove filter tabs for `accepted`, `preparing`, and `out_for_delivery` statuses. The filter bar must only show tabs relevant to the simplified workflow: `pending`, `delivered`, and `cancelled` (plus an 'All' option).",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/OrderConfirmation.tsx",
-          "frontend/src/hooks/useQueries.ts"
+          "frontend/src/components/OrderFilters.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/components/OrderConfirmation.tsx",
-          "frontend/src/hooks/useQueries.ts"
-        ]
-      },
-      {
-        "id": "REQ-36",
-        "summary": "Fix the `MyOrdersView` component (`frontend/src/components/MyOrdersView.tsx`) and its underlying `useOrdersByCustomer` hook in `frontend/src/hooks/useQueries.ts` to poll for updated order statuses. The query must refetch at least every 15 seconds when the view is active, and must also refetch immediately after any order-related mutation (place order, cancel order). Status badges displayed in the order history list must reflect the latest value from the backend.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/components/MyOrdersView.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/components/MyOrdersView.tsx"
-        ]
-      },
-      {
-        "id": "REQ-37",
-        "summary": "Fix the Courier App dashboard (`frontend/src/pages/CourierApp.tsx` and `frontend/src/hooks/useQueries.ts`) so that on every mount (including after a hard page refresh) it re-fetches all orders from the backend via `actor.getAllOrders()`. Order status displayed on each `OrderCard` must come directly from the fetched backend data, not from local component state. The `useAllOrders` query must also automatically refetch every 15 seconds to stay current, and must invalidate and refetch after any `acceptOrder` or `updateOrderStatus` mutation completes.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/pages/CourierApp.tsx",
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/components/OrderCard.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/pages/CourierApp.tsx",
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/components/OrderCard.tsx"
+          "frontend/src/components/OrderFilters.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
-    "backend/main.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/backend.d.ts",
-    "frontend/src/backend.ts",
-    "frontend/src/components/MyOrdersView.tsx",
     "frontend/src/components/OrderCard.tsx",
-    "frontend/src/components/OrderConfirmation.tsx",
-    "frontend/src/declarations/backend.did.d.ts",
-    "frontend/src/declarations/backend.did.js",
-    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/components/OrderFilters.tsx",
     "frontend/src/pages/CourierApp.tsx",
-    "frontend/src/pages/CustomerPortal.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

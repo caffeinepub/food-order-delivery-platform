@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useGetCallerProfile, useMenu } from '../hooks/useQueries';
+import { useQueryClient } from '@tanstack/react-query';
+import { useGetCallerProfile } from '../hooks/useQueries';
 import { useCart } from '../hooks/useCart';
 import CustomerNavigation from '../components/CustomerNavigation';
 import MenuSection from '../components/MenuSection';
@@ -10,54 +11,56 @@ import OrderConfirmation from '../components/OrderConfirmation';
 import MyOrdersView from '../components/MyOrdersView';
 import AccountView from '../components/AccountView';
 import { ProfileSetupModal } from '../components/ProfileSetupModal';
+import { useMenu } from '../hooks/useQueries';
 
-type View = 'menu' | 'checkout' | 'confirmation' | 'orders' | 'account';
-
-const CONFIRMED_ORDER_KEY = 'foodrush_confirmed_order_id';
+type View = 'menu' | 'orders' | 'account' | 'checkout' | 'confirmation';
 
 export default function CustomerPortal() {
   const { identity } = useInternetIdentity();
+  const queryClient = useQueryClient();
   const isAuthenticated = !!identity;
-
-  const { data: userProfile, isLoading: profileLoading, isFetched: profileFetched } = useGetCallerProfile();
-  const { data: menuItems = [], isLoading: menuLoading } = useMenu();
 
   const [currentView, setCurrentView] = useState<View>('menu');
   const [isCartOpen, setIsCartOpen] = useState(false);
-
-  // Persist confirmedOrderId to sessionStorage so it survives page refresh
+  // confirmedOrderId is persisted to sessionStorage so it survives page refresh
   const [confirmedOrderId, setConfirmedOrderId] = useState<string | null>(() => {
-    return sessionStorage.getItem(CONFIRMED_ORDER_KEY);
+    return sessionStorage.getItem('confirmedOrderId');
   });
 
+  // useCart returns `items`, not `cartItems`
   const { items: cartItems, addItem, removeItem, updateQuantity, clearCart, total, itemCount } = useCart();
+  const { data: userProfile, isLoading: profileLoading, isFetched: profileFetched } = useGetCallerProfile();
+  const { data: menuItems = [], isLoading: menuLoading } = useMenu();
 
-  // Show profile setup modal for authenticated users without a profile
   const showProfileSetup = isAuthenticated && !profileLoading && profileFetched && userProfile === null;
-
-  const handleOrderPlaced = (orderId: string) => {
-    setConfirmedOrderId(orderId);
-    sessionStorage.setItem(CONFIRMED_ORDER_KEY, orderId);
-    setCurrentView('confirmation');
-    clearCart();
-  };
-
-  const handleBackToMenu = () => {
-    setCurrentView('menu');
-    setConfirmedOrderId(null);
-    sessionStorage.removeItem(CONFIRMED_ORDER_KEY);
-  };
 
   const handleViewChange = (view: string) => {
     setCurrentView(view as View);
     setIsCartOpen(false);
   };
 
+  const handleOrderPlaced = (orderId: string) => {
+    setConfirmedOrderId(orderId);
+    sessionStorage.setItem('confirmedOrderId', orderId);
+    clearCart();
+    setCurrentView('confirmation');
+    // Invalidate orders queries so they refetch with the new order
+    queryClient.invalidateQueries({ queryKey: ['allOrders'] });
+    queryClient.invalidateQueries({ queryKey: ['ordersByCustomer'] });
+  };
+
+  const handleNewOrder = () => {
+    setConfirmedOrderId(null);
+    sessionStorage.removeItem('confirmedOrderId');
+    setCurrentView('menu');
+  };
+
   // Group menu items by category
   const categories = Array.from(new Set(menuItems.map((item) => item.category)));
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
+      {/* CustomerNavigation does not accept isAuthenticated prop — it reads identity internally */}
       <CustomerNavigation
         currentView={currentView}
         onViewChange={handleViewChange}
@@ -114,8 +117,13 @@ export default function CustomerPortal() {
           </div>
         )}
 
+        {currentView === 'orders' && <MyOrdersView />}
+
+        {currentView === 'account' && <AccountView />}
+
         {currentView === 'checkout' && (
           <div className="max-w-2xl mx-auto px-4 py-8">
+            {/* CheckoutForm expects onOrderPlaced, not onOrderConfirmed */}
             <CheckoutForm
               cartItems={cartItems}
               total={total}
@@ -126,40 +134,26 @@ export default function CustomerPortal() {
         )}
 
         {currentView === 'confirmation' && confirmedOrderId && (
-          <div className="max-w-2xl mx-auto px-4 py-8">
-            <OrderConfirmation
-              orderId={confirmedOrderId}
-              onBackToMenu={handleBackToMenu}
-            />
-          </div>
+          <OrderConfirmation
+            orderId={confirmedOrderId}
+            onNewOrder={handleNewOrder}
+          />
         )}
 
         {currentView === 'confirmation' && !confirmedOrderId && (
-          <div className="max-w-2xl mx-auto px-4 py-8 text-center">
-            <p className="text-gray-500">No active order found.</p>
+          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <p className="text-sm">No order to display.</p>
             <button
               onClick={() => setCurrentView('menu')}
-              className="mt-4 px-6 py-2 bg-orange-500 text-white rounded-full font-medium hover:bg-orange-600 transition-colors"
+              className="mt-3 text-sm text-orange-500 hover:text-orange-600 font-medium underline"
             >
-              Back to Menu
+              Browse Menu
             </button>
-          </div>
-        )}
-
-        {currentView === 'orders' && (
-          <div className="max-w-4xl mx-auto px-4 py-8">
-            <MyOrdersView />
-          </div>
-        )}
-
-        {currentView === 'account' && (
-          <div className="max-w-2xl mx-auto px-4 py-8">
-            <AccountView />
           </div>
         )}
       </main>
 
-      {/* Cart Panel */}
+      {/* Cart Panel — expects `items`, not `cartItems` */}
       <CartPanel
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
@@ -173,7 +167,7 @@ export default function CustomerPortal() {
         }}
       />
 
-      {/* Profile Setup Modal */}
+      {/* ProfileSetupModal requires open and onComplete props */}
       <ProfileSetupModal
         open={showProfileSetup}
         onComplete={() => {

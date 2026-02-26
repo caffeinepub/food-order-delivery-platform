@@ -1,12 +1,12 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 23,
-  "summary": "Two separate standalone web apps sharing a single backend: (1) a Customer Portal (The Deccan BHOJAN) with Internet Identity login, nav bar (Browse Menu, My Orders, Account), menu browsing, cart, checkout pre-filled from profile, order history, and account management; and (2) a Courier App with a PIN-based access gate (PIN: 1953), a full order dashboard, status controls (pending → accepted → preparing → out_for_delivery → delivered), and a Menu Management section (add, edit, toggle availability, delete items). Both apps share one Motoko backend actor handling orders, menu, and customer profiles. No cross-app navigation.",
+  "projectStateVersion": 33,
+  "summary": "Two separate standalone web apps sharing a single backend: (1) a Customer Portal (The Deccan BHOJAN) with Internet Identity login, nav bar (Browse Menu, My Orders, Account), menu browsing, cart, checkout pre-filled from profile, order history, and account management; and (2) a Courier App with a PIN-based access gate (PIN: 1953), a simplified order dashboard with only Delete and Deliver actions (no intermediate prep stages — order goes directly from pending → delivered), and a Menu Management section (add, edit, toggle availability, delete items). Both apps share one Motoko backend actor handling orders, menu, and customer profiles. No cross-app navigation.",
   "architectural_notes": [
-    "Order status flow: placed → preparing → out for delivery → delivered",
     "Two separate standalone frontend deployments (Customer Portal + Courier App) sharing one Motoko backend actor",
     "Customer Portal uses Internet Identity for authentication; orders are tied to logged-in user principal",
-    "Courier App access is gated by PIN '1953'; no Internet Identity required for courier access"
+    "Courier App access is gated by PIN '1953'; no Internet Identity required for courier access",
+    "Courier App order status flow simplified: pending → delivered only (no accepted/preparing/out_for_delivery steps); each order card shows only Delete and Deliver actions"
   ],
   "known_issues": [
     "Add Item form submission in Courier App Menu Management silently fails — mutation does not fire or complete, no error shown to user",
@@ -15,9 +15,11 @@
     "Toggling menu item availability in Menu Management permanently deletes the item instead of flipping the availability flag",
     "Orders disappear on Customer Portal refresh — frontend relies on transient React state instead of re-fetching from backend",
     "Courier App order status resets to 'Accept Order' on refresh — status not sourced from backend stable map on load",
-    "Order status updates by courier do not reflect on Customer Portal — no polling or query invalidation in place"
+    "Order status updates by courier do not reflect on Customer Portal — no polling or query invalidation in place",
+    "Backend addMenuItem returns 'Unauthorized: Only admins can add menu items' for PIN-authenticated courier users — admin role check not fully removed from backend",
+    "'Failed to load orders' error on Customer Portal — orders query failing with authorization or fetch error"
   ],
-  "isFixRequest": true,
+  "isFixRequest": false,
   "existing_features": [
     {
       "id": "feature-build-the-customer-portal-as-the-primary-frontend-view-it-must-include-a-menu-browsing-page-showing-available-food-items-grouped-by-category-with-names-descriptions-and-prices-a-shopping-cart-sidebar-or-panel-where-customers-can-add-remove-items-and-see-the-running-total-a-checkout-form-collecting-customer-name-and-phone-number-and-an-order-confirmation-screen-showing-the-assigned-orderid-and-initial-status",
@@ -218,6 +220,134 @@
         "REQ-37"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-fix-the-useallorders-hook-in-frontend-src-hooks-usequeries-ts-so-its-query-function-calls-actor-getallorders-using-an-anonymous-or-unauthenticated-actor-not-an-identity-scoped-actor-ensuring-it-does-not-fail-when-the-user-is-not-logged-in-via-internet-identity-the-query-must-be-enabled-as-soon-as-the-actor-is-non-null-and-must-not-depend-on-an-authenticated-identity-if-the-current-actor-initialization-in-useactor-requires-authentication-to-call-getallorders-switch-the-courier-app-s-orders-query-to-use-the-anonymous-actor-variant",
+      "title": "Fix the `useAllOrders` hook in `frontend/src/hooks/useQueries.ts` so its query function calls `actor.getAllOrders()` using an anonymous or unauthenticated actor (not an identity-scoped actor), ensuring it does not fail when the user is not logged in via Internet Identity. The query must be enabled as soon as the actor is non-null and must not depend on an authenticated identity. If the current actor initialization in `useActor` requires authentication to call `getAllOrders`, switch the Courier App's orders query to use the anonymous actor variant.",
+      "reqIds": [
+        "REQ-40"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-courier-app-dashboard-in-frontend-src-pages-courierapp-tsx-and-the-useallorders-hook-in-frontend-src-hooks-usequeries-ts-so-that-on-every-mount-including-after-a-hard-page-refresh-all-orders-are-re-fetched-from-the-backend-via-actor-getallorders-order-status-displayed-on-each-ordercard-must-come-directly-from-the-fetched-backend-data-not-from-any-local-component-state-the-useallorders-query-must-automatically-refetch-every-15-seconds-and-must-invalidate-and-refetch-immediately-after-any-acceptorder-or-updateorderstatus-mutation-completes",
+      "title": "Fix the Courier App dashboard in `frontend/src/pages/CourierApp.tsx` and the `useAllOrders` hook in `frontend/src/hooks/useQueries.ts` so that on every mount (including after a hard page refresh) all orders are re-fetched from the backend via `actor.getAllOrders()`. Order status displayed on each `OrderCard` must come directly from the fetched backend data, not from any local component state. The `useAllOrders` query must automatically refetch every 15 seconds and must invalidate and refetch immediately after any `acceptOrder` or `updateOrderStatus` mutation completes.",
+      "reqIds": [
+        "REQ-41"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-myordersview-component-frontend-src-components-myordersview-tsx-and-the-useordersbycustomer-hook-in-frontend-src-hooks-usequeries-ts-so-that-order-status-badges-always-reflect-the-latest-value-from-the-backend-the-query-must-poll-refetch-at-least-every-15-seconds-when-the-view-is-active-and-must-also-refetch-immediately-after-any-order-related-mutation-place-order-cancel-order-the-hook-must-be-enabled-whenever-the-actor-and-identity-are-available",
+      "title": "Fix the `MyOrdersView` component (`frontend/src/components/MyOrdersView.tsx`) and the `useOrdersByCustomer` hook in `frontend/src/hooks/useQueries.ts` so that order status badges always reflect the latest value from the backend. The query must poll (refetch) at least every 15 seconds when the view is active, and must also refetch immediately after any order-related mutation (place order, cancel order). The hook must be enabled whenever the actor and identity are available.",
+      "reqIds": [
+        "REQ-42"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-orderconfirmation-component-frontend-src-components-orderconfirmation-tsx-to-poll-the-backend-for-the-specific-order-s-latest-status-every-8-seconds-using-getorderbyid-or-an-equivalent-query-the-status-displayed-in-the-progress-stepper-must-always-reflect-the-value-returned-from-the-backend-on-remount-e-g-after-a-page-refresh-the-component-must-accept-the-orderid-prop-and-immediately-fetch-the-current-status-from-the-backend-before-rendering-it-must-never-display-a-stale-or-locally-cached-status",
+      "title": "Fix the `OrderConfirmation` component (`frontend/src/components/OrderConfirmation.tsx`) to poll the backend for the specific order's latest status every 8 seconds using `getOrderById` or an equivalent query. The status displayed in the progress stepper must always reflect the value returned from the backend. On remount (e.g., after a page refresh), the component must accept the `orderId` prop and immediately fetch the current status from the backend before rendering — it must never display a stale or locally-cached status.",
+      "reqIds": [
+        "REQ-43"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-useallorders-hook-in-frontend-src-hooks-usequeries-ts-to-call-actor-getallorders-using-an-anonymous-or-unauthenticated-actor-so-it-never-fails-when-the-user-is-not-logged-in-via-internet-identity-the-query-must-be-enabled-as-soon-as-the-actor-is-non-null-and-must-not-depend-on-an-authenticated-identity-the-query-must-automatically-refetch-every-15-seconds-and-must-invalidate-and-refetch-immediately-after-any-acceptorder-updateorderstatus-or-placeorder-mutation-completes",
+      "title": "Fix the `useAllOrders` hook in `frontend/src/hooks/useQueries.ts` to call `actor.getAllOrders()` using an anonymous or unauthenticated actor so it never fails when the user is not logged in via Internet Identity. The query must be enabled as soon as the actor is non-null and must not depend on an authenticated identity. The query must automatically refetch every 15 seconds and must invalidate and refetch immediately after any `acceptOrder`, `updateOrderStatus`, or `placeOrder` mutation completes.",
+      "reqIds": [
+        "REQ-45"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-courier-app-dashboard-in-frontend-src-pages-courierapp-tsx-so-that-on-every-mount-including-after-a-hard-page-refresh-all-orders-are-re-fetched-from-the-backend-via-actor-getallorders-order-status-displayed-on-each-ordercard-must-come-directly-from-the-fetched-backend-data-not-from-any-local-component-state-the-dashboard-must-handle-loading-error-and-empty-states-gracefully-and-render-the-full-list-of-returned-orders",
+      "title": "Fix the Courier App dashboard in `frontend/src/pages/CourierApp.tsx` so that on every mount (including after a hard page refresh) all orders are re-fetched from the backend via `actor.getAllOrders()`. Order status displayed on each `OrderCard` must come directly from the fetched backend data, not from any local component state. The dashboard must handle loading, error, and empty states gracefully and render the full list of returned orders.",
+      "reqIds": [
+        "REQ-46"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-useordersbycustomer-hook-in-frontend-src-hooks-usequeries-ts-to-poll-refetch-at-least-every-15-seconds-when-active-and-to-also-refetch-immediately-after-any-order-related-mutation-place-order-cancel-order-the-hook-must-be-enabled-whenever-the-actor-and-identity-are-available-status-badges-in-myordersview-frontend-src-components-myordersview-tsx-must-always-reflect-the-latest-value-returned-from-the-backend-never-stale-or-locally-cached-state",
+      "title": "Fix the `useOrdersByCustomer` hook in `frontend/src/hooks/useQueries.ts` to poll (refetch) at least every 15 seconds when active, and to also refetch immediately after any order-related mutation (place order, cancel order). The hook must be enabled whenever the actor and identity are available. Status badges in `MyOrdersView` (`frontend/src/components/MyOrdersView.tsx`) must always reflect the latest value returned from the backend, never stale or locally-cached state.",
+      "reqIds": [
+        "REQ-47"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-orderconfirmation-component-frontend-src-components-orderconfirmation-tsx-to-poll-getorderbyid-or-equivalent-backend-call-for-the-specific-order-s-latest-status-every-8-seconds-the-status-displayed-in-the-progress-stepper-must-always-reflect-the-value-returned-from-the-backend-never-local-component-state-set-at-order-placement-time-on-remount-e-g-after-a-page-refresh-the-component-must-accept-the-orderid-prop-and-immediately-fetch-the-current-status-from-the-backend-before-rendering-it-must-never-display-a-stale-or-locally-cached-status",
+      "title": "Fix the `OrderConfirmation` component (`frontend/src/components/OrderConfirmation.tsx`) to poll `getOrderById` (or equivalent backend call) for the specific order's latest status every 8 seconds. The status displayed in the progress stepper must always reflect the value returned from the backend, never local component state set at order placement time. On remount (e.g., after a page refresh), the component must accept the `orderId` prop and immediately fetch the current status from the backend before rendering — it must never display a stale or locally-cached status.",
+      "reqIds": [
+        "REQ-48"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-customer-portal-frontend-src-pages-customerportal-tsx-so-that-active-recent-order-state-is-never-held-exclusively-in-transient-react-component-state-on-mount-and-on-navigation-to-the-menu-or-order-confirmation-view-the-portal-must-re-fetch-the-user-s-latest-orders-from-the-backend-via-getordersbycustomer-the-useordersbycustomer-hook-must-be-the-authoritative-source-of-order-data-not-sessionstorage-or-in-memory-state-alone-whenever-the-actor-and-identity-are-available",
+      "title": "Fix the Customer Portal (`frontend/src/pages/CustomerPortal.tsx`) so that active/recent order state is never held exclusively in transient React component state. On mount and on navigation to the Menu or Order Confirmation view, the portal must re-fetch the user's latest orders from the backend via `getOrdersByCustomer`. The `useOrdersByCustomer` hook must be the authoritative source of order data — not sessionStorage or in-memory state alone — whenever the actor and identity are available.",
+      "reqIds": [
+        "REQ-49"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-useallorders-hook-in-frontend-src-hooks-usequeries-ts-so-that-it-uses-staletime-0-refetchonmount-always-and-refetchonwindowfocus-true-ensuring-a-fresh-fetch-from-actor-getallorders-on-every-mount-including-hard-page-refresh-the-query-must-not-rely-on-any-cached-or-local-state-as-the-source-of-truth-for-order-status",
+      "title": "Fix the `useAllOrders` hook in `frontend/src/hooks/useQueries.ts` so that it uses `staleTime: 0`, `refetchOnMount: 'always'`, and `refetchOnWindowFocus: true`, ensuring a fresh fetch from `actor.getAllOrders()` on every mount including hard page refresh. The query must not rely on any cached or local state as the source of truth for order status.",
+      "reqIds": [
+        "REQ-50"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-frontend-src-pages-courierapp-tsx-so-that-each-ordercard-renders-its-status-value-exclusively-from-the-data-returned-by-the-useallorders-query-remove-any-local-component-state-e-g-usestate-that-holds-or-overrides-order-status-independently-of-the-fetched-backend-data-order-status-must-never-revert-to-a-stale-or-default-value-after-a-page-refresh",
+      "title": "Fix `frontend/src/pages/CourierApp.tsx` so that each `OrderCard` renders its status value exclusively from the data returned by the `useAllOrders` query. Remove any local component state (e.g., `useState`) that holds or overrides order status independently of the fetched backend data. Order status must never revert to a stale or default value after a page refresh.",
+      "reqIds": [
+        "REQ-51"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-useallorders-query-in-frontend-src-hooks-usequeries-ts-automatically-refetches-every-15-seconds-refetchinterval-15000-and-invalidates-and-refetches-immediately-after-any-acceptorder-or-updateorderstatus-mutation-completes-successfully",
+      "title": "Ensure the `useAllOrders` query in `frontend/src/hooks/useQueries.ts` automatically refetches every 15 seconds (`refetchInterval: 15000`) and invalidates and refetches immediately after any `acceptOrder` or `updateOrderStatus` mutation completes successfully.",
+      "reqIds": [
+        "REQ-52"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-usedeleteorder-react-query-mutation-hook-in-frontend-src-hooks-usequeries-ts-that-calls-actor-deleteorder-orderid-on-success-the-hook-must-invalidate-the-allorders-query-key-so-the-courier-app-dashboard-reflects-the-removal-immediately",
+      "title": "Add a `useDeleteOrder` React Query mutation hook in `frontend/src/hooks/useQueries.ts` that calls `actor.deleteOrder(orderId)`. On success, the hook must invalidate the `allOrders` query key so the Courier App dashboard reflects the removal immediately.",
+      "reqIds": [
+        "REQ-54"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-delete-order-button-to-each-order-card-in-the-courier-app-dashboard-frontend-src-pages-courierapp-tsx-and-or-frontend-src-components-ordercard-tsx-the-button-must-show-a-confirmation-prompt-before-invoking-the-usedeleteorder-mutation-on-successful-deletion-the-order-must-disappear-from-the-dashboard-without-a-page-reload-style-the-button-with-the-app-s-white-and-orange-f97316-theme",
+      "title": "Add a 'Delete Order' button to each order card in the Courier App dashboard (`frontend/src/pages/CourierApp.tsx` and/or `frontend/src/components/OrderCard.tsx`). The button must show a confirmation prompt before invoking the `useDeleteOrder` mutation. On successful deletion, the order must disappear from the dashboard without a page reload. Style the button with the app's white and orange (#F97316) theme.",
+      "reqIds": [
+        "REQ-55"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-frontend-src-components-ordercard-tsx-and-frontend-src-pages-courierapp-tsx-remove-all-intermediate-status-action-buttons-accept-preparing-out-for-delivery-from-each-order-card-each-order-card-must-display-exactly-two-action-buttons-1-deliver-calls-updateorderstatus-to-set-the-order-status-directly-to-delivered-and-2-delete-shows-a-confirmation-prompt-then-calls-usedeleteorder-no-other-status-advancement-controls-should-be-present",
+      "title": "In `frontend/src/components/OrderCard.tsx` and `frontend/src/pages/CourierApp.tsx`, remove all intermediate status action buttons (Accept, Preparing, Out for Delivery) from each order card. Each order card must display exactly two action buttons: (1) **Deliver** — calls `updateOrderStatus` to set the order status directly to `delivered`, and (2) **Delete** — shows a confirmation prompt then calls `useDeleteOrder`. No other status-advancement controls should be present.",
+      "reqIds": [
+        "REQ-56"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-frontend-src-components-orderfilters-tsx-remove-filter-tabs-for-accepted-preparing-and-out-for-delivery-statuses-the-filter-bar-must-only-show-tabs-relevant-to-the-simplified-workflow-pending-delivered-and-cancelled-plus-an-all-option",
+      "title": "In `frontend/src/components/OrderFilters.tsx`, remove filter tabs for `accepted`, `preparing`, and `out_for_delivery` statuses. The filter bar must only show tabs relevant to the simplified workflow: `pending`, `delivered`, and `cancelled` (plus an 'All' option).",
+      "reqIds": [
+        "REQ-57"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -399,6 +529,50 @@
       "reqIds": [
         "REQ-33"
       ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-37",
+      "summary": "Remove all remaining authorization/role checks from the backend `addMenuItem`, `updateMenuItem`, `toggleMenuItemAvailability`, and `deleteMenuItem` functions in `backend/main.mo`. These four functions must not check the caller's principal, role, or any admin flag. Any call to `MixinAuthorization`, `AccessControl`, `isAdmin`, or similar guards inside these functions must be deleted. The functions must execute successfully for any caller — authenticated or anonymous — without returning any 'Unauthorized' or 'Only admins' error variant.",
+      "reqIds": [
+        "REQ-38"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-38",
+      "summary": "Audit and fix the `placeOrder` and `getAllOrders` functions in `backend/main.mo` to ensure all placed orders are stored in a single canonical stable map keyed by `orderId` and that `getAllOrders` returns every entry from that map without filtering by caller identity or customer principal. If `placeOrder` currently writes to any per-caller or per-customer scoped structure that is not fully traversed by `getAllOrders`, refactor both functions to use one unified stable orders map. Additionally, `getOrdersByCustomer` must query from the same canonical map, filtering only by the stored `customerId` field — not by the caller's principal.",
+      "reqIds": [
+        "REQ-39"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-39",
+      "summary": "Audit and fix the `placeOrder` and `getAllOrders` functions in `backend/main.mo` to ensure all placed orders are stored in a single canonical stable map keyed by `orderId` and that `getAllOrders` returns every entry from that map without filtering by caller identity or customer principal. If `placeOrder` currently writes to any per-caller or per-customer scoped structure not fully traversed by `getAllOrders`, refactor both functions to use one unified stable orders map. `getOrdersByCustomer` must query from the same canonical map, filtering only by the stored `customerId` field — not by the caller's principal. Remove all remaining authorization/role checks from `addMenuItem`, `updateMenuItem`, `toggleMenuItemAvailability`, and `deleteMenuItem` — these four functions must execute successfully for any caller without returning any 'Unauthorized' or 'Only admins' error.",
+      "reqIds": [
+        "REQ-44"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-40",
+      "summary": "Add a delete order option to the Courier App dashboard so couriers can permanently remove orders",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-44",
+      "summary": "Add a `deleteOrder` function to the Motoko backend actor in `backend/main.mo`. The function must accept an `orderId` (Nat) and permanently remove the matching entry from the canonical stable orders map. It must return a `Result` indicating success or a `#notFound` error if the order does not exist. No caller identity or role check is required.",
+      "reqIds": [
+        "REQ-53"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-45",
+      "summary": "Remove all intermediate order status stages (accepted, preparing, out_for_delivery) from the Courier App order cards. Each order card must only show two actions: Delete (removes the order) and Deliver (marks it as delivered). The order workflow goes directly from pending → delivered with no intermediate steps.",
+      "reqIds": [],
       "status": "pending"
     }
   ],
